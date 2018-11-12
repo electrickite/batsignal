@@ -1,0 +1,134 @@
+{
+   Notify:Leak1
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:g_malloc0
+   fun:g_type_class_ref
+   fun:g_type_class_ref
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_dbus_proxy_new_for_bus_sync
+   obj:/usr/lib/libnotify.so.4.0.0
+   fun:notify_notification_show
+   fun:main
+}
+{
+   Notify:Leak2
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:g_malloc0
+   fun:g_type_class_ref
+   fun:g_type_class_ref
+   fun:g_param_spec_enum
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_type_class_ref
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_dbus_proxy_new_for_bus_sync
+   obj:/usr/lib/libnotify.so.4.0.0
+   fun:notify_notification_show
+}
+{
+   Notify:Leak3
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:realloc
+   fun:g_realloc
+   obj:/usr/lib/libgobject-2.0.so.0.5800.1
+   fun:g_type_register_static
+   fun:g_flags_register_static
+   fun:g_tls_certificate_flags_get_type
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_type_class_ref
+   fun:g_object_new_with_properties
+   fun:g_object_new
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_dbus_address_get_stream_sync
+}
+{
+   Notify:Leak4
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:realloc
+   fun:g_realloc
+   obj:/usr/lib/libgobject-2.0.so.0.5800.1
+   fun:g_type_register_static
+   fun:g_enum_register_static
+   fun:g_data_stream_newline_type_get_type
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_type_class_ref
+   fun:g_object_new_valist
+   fun:g_object_new
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_bus_get_sync
+}
+{
+   Notify:Leak5
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:g_malloc0
+   fun:g_type_class_ref
+   fun:g_type_class_ref
+   fun:g_type_create_instance
+   fun:g_param_spec_internal
+   fun:g_param_spec_int
+   obj:/usr/lib/libnotify.so.4.0.0
+   fun:g_type_class_ref
+   fun:g_object_new_valist
+   fun:g_object_new
+   fun:notify_notification_new
+}
+{
+   Notify:Leak6
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:realloc
+   fun:g_realloc
+   obj:/usr/lib/libgobject-2.0.so.0.5800.1
+   fun:g_type_register_static
+   fun:g_type_register_static_simple
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_simple_async_result_get_type
+   fun:g_async_result_legacy_propagate_error
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_main_context_dispatch
+}
+{
+   Notify:Leak7
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:pthread_create@@GLIBC_2.2.5
+   obj:/usr/lib/libglib-2.0.so.0.5800.1
+   fun:g_thread_new
+   obj:/usr/lib/libglib-2.0.so.0.5800.1
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_task_get_type
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_dbus_proxy_new_for_bus_sync
+   obj:/usr/lib/libnotify.so.4.0.0
+}
+{
+   Notify:Leak8
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:pthread_create@@GLIBC_2.2.5
+   obj:/usr/lib/libglib-2.0.so.0.5800.1
+   fun:g_thread_new
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_bus_get_sync
+   obj:/usr/lib/libgio-2.0.so.0.5800.1
+   fun:g_initable_new_valist
+   fun:g_initable_new
+   fun:g_dbus_proxy_new_for_bus_sync
+}

@@ -1,0 +1,37 @@
+batsignal - Simple battery monitor
+==================================
+batsignal is a battery daemon which notifies the user via libnotify about
+low battery. It is meant to be used with minimal window managers.
+
+
+Features
+--------
+Two customizable warnings via libnotify on two different configurable battery
+levels.
+
+
+Requirements
+------------
+In order to build batsignal you need the libnotify library.
+
+
+Installation
+------------
+Edit config.mk to match your local setup (batsignal is installed into the
+/usr/local namespace by default).
+
+Afterwards enter the following command to build and install batsignal (if
+necessary as root):
+
+    make clean install
+
+
+Running batsignal
+-----------------
+See the man page for details.
+
+
+Configuration
+-------------
+batsignal can be customized by creating a custom config.h and (re)compiling the
+source code. This keeps it fast, secure and simple.

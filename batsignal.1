@@ -1,0 +1,28 @@
+.TH BATSIGNAL 1 batsignal\-VERSION
+.SH NAME
+batsignal \- battery monitor daemon
+.SH SYNOPSIS
+.B batsignal
+.RB [ \-dhv ]
+.SH DESCRIPTION
+batsignal is a lightweight battery daemon written in C. It notifies the user via libnotify about low battery. It is meant for minimal window managers.
+.SH OPTIONS
+.TP
+.B \-d
+run batsignal as daemon in background
+.TP
+.B \-h
+display help
+.TP
+.B \-v
+display version and copyright details
+.SH CUSTOMIZATION
+.B batsignal
+can be customized by creating a custom config.h and (re)compiling the source
+code. This keeps it fast, secure and simple.
+.SH AUTHORS
+See the LICENSE file for the authors.
+.SH LICENSE
+See the LICENSE file for the terms of redistribution.
+.SH BUGS
+See the FIXME's in the code.
