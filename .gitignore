@@ -1,3 +1,4 @@
 batsignal
 batsignal.o
-config.h
+*.tar.gz
+*.supp

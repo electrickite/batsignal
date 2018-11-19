@@ -1,8 +1,8 @@
 # See LICENSE file for copyright and license details.
 
-VERSION = 1.0
+VERSION = 0.2.0
 
-PREFIX = /usr/local
+PREFIX = /usr
 MANPREFIX = ${PREFIX}/share/man
 
 INCS = -I. -I/usr/include
