@@ -39,6 +39,8 @@ static char *criticalmsg = "Battery is critically low";
 /* run this system command if battery reaches danger level */
 static char *dangercmd = "";
 
+/* app name for notification */
+static char *appname = PROGNAME;
 
 void print_version()
 {
@@ -69,7 +71,9 @@ Options:\n\
                    (default: BAT0)\n\
     -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
                    (default: 60)\n\
-", PROGNAME);
+    -a APP_NAME    specify app name for the notification\n\
+                   (default: %s)\n\
+", PROGNAME, PROGNAME);
 }
 
 void notify(char *msg)
@@ -77,7 +81,7 @@ void notify(char *msg)
   char body[20];
   sprintf(body, "Battery level: %u%%", battery_level);
 
-  if (msg[0] != '\0' && notify_init(PROGNAME)) {
+  if (msg[0] != '\0' && notify_init(appname)) {
     NotifyNotification *notification = notify_notification_new(msg, body, NULL);
     notify_notification_set_urgency(notification, NOTIFY_URGENCY_CRITICAL);
     notify_notification_set_timeout(notification, NOTIFY_EXPIRES_NEVER);
@@ -123,7 +127,7 @@ void parse_args(int argc, char *argv[])
 {
   int c;
 
-  while ((c = getopt(argc, argv, ":hvbiw:c:d:W:C:D:n:m:")) != -1) {
+  while ((c = getopt(argc, argv, ":hvbiw:c:d:W:C:D:n:m:a:")) != -1) {
     switch (c) {
       case 'h':
         print_help();
@@ -160,6 +164,9 @@ void parse_args(int argc, char *argv[])
         break;
       case 'm':
         multiplier = atoi(optarg);
+        break;
+      case 'a':
+        appname = optarg;
         break;
       case '?':
         errx(1, "Unknown option `-%c'.", optopt);
