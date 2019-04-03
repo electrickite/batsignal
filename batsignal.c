@@ -244,14 +244,11 @@ int main(int argc, char *argv[])
       }
 
     } else { /* charging */
-      if (full && battery_level >= full && battery_state != STATE_FULL) {
-        battery_state = STATE_FULL;
-        notify(fullmsg);
-
-      } else {
         battery_state = STATE_AC;
-        duration = (full - battery_level) * multiplier;
-      }
+        if (full && battery_level >= full && battery_state != STATE_FULL) {
+            battery_state = STATE_FULL;
+            notify(fullmsg);
+	}
     }
 
     sleep(duration);
