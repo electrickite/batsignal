@@ -5,7 +5,7 @@ batsignal \- battery monitor daemon
 .B batsignal
 .RB [ OPTIONS ]
 .SH DESCRIPTION
-batsignal is a lightweight battery daemon written in C that notifies the user about low battery states. It is intended for minimal window managers, but can be used in any environment that supports desktop notifications via libnotify.
+batsignal is a lightweight battery daemon written in C that notifies the user about battery states. It is intended for minimal window managers, but can be used in any environment that supports desktop notifications via libnotify.
 .SH OPTIONS
 .TP
 .B \-h
@@ -21,16 +21,16 @@ run batsignal as background daemon
 ignore missing battery errors
 .TP
 .B \-w LEVEL
-battery warning LEVEL (default 15). Set to 0 disable this level
+battery warning LEVEL (default 15). 0 disables this level
 .TP
 .B \-c LEVEL
-critical battery LEVEL (default 5). Set to 0 disable this level
+critical battery LEVEL (default 5). 0 disables this level
 .TP
 .B \-d LEVEL
-battery danger LEVEL (default 2). Set to 0 disable this level
+battery danger LEVEL (default 2). 0 disables this level
 .TP
 .B \-f LEVEL
-battery full LEVEL (default 95). Set to 0 disable this level
+battery full LEVEL (default 0). 0 disables this level
 .TP
 .B \-W MESSAGE
 show MESSAGE when battery is at warning level
@@ -51,9 +51,9 @@ battery device NAME (default BAT0)
 minimum number of SECONDS (default 60) to wait between battery checks
 .TP
 .B \-a APP_NAME
-app name for notifications
+app name used in notifications (default: batsignal)
 .SH AUTHORS
-Written by Corey Hinshaw and Aaron Marcher.
+Written by Corey Hinshaw. Based on juiced by Aaron Marcher.
 .SH COPYRIGHT
 Copyright 2018-2019 Corey Hinshaw
 .br

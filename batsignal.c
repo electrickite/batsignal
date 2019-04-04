@@ -32,13 +32,11 @@ static unsigned int multiplier = 60;
 static unsigned int warning = 15;
 static unsigned int critical = 5;
 static unsigned int danger = 2;
-static unsigned int full = 95;
+static unsigned int full = 0;
 
-/* messages for warning and critical levels */
+/* messages for battery levels */
 static char *warningmsg = "Battery is low";
 static char *criticalmsg = "Battery is critically low";
-
-/* message for full battery */
 static char *fullmsg = "Battery is full";
 
 /* run this system command if battery reaches danger level */
@@ -56,7 +54,7 @@ void print_help()
 {
   printf("Usage: %s [OPTIONS]\n\
 \n\
-Display a battery level notifications.\n\
+Sends battery level notifications.\n\
 \n\
 Options:\n\
     -h             print this help message\n\
@@ -70,7 +68,7 @@ Options:\n\
     -d LEVEL       battery danger LEVEL\n\
                    (default: 2)\n\
     -f LEVEL       full battery LEVEL\n\
-                   (default: 95)\n\
+                   (default: disabled)\n\
     -W MESSAGE     show MESSAGE when battery is at warning level\n\
     -C MESSAGE     show MESSAGE when battery is at critical level\n\
     -D COMMAND     run COMMAND when battery is at danger level\n\
@@ -79,7 +77,7 @@ Options:\n\
                    (default: BAT0)\n\
     -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
                    (default: 60)\n\
-    -a APP_NAME    specify app name for the notification\n\
+    -a NAME        app NAME used in desktop notifications\n\
                    (default: %s)\n\
 ", PROGNAME, PROGNAME);
 }
@@ -192,19 +190,30 @@ void parse_args(int argc, char *argv[])
 
 void validate_options()
 {
+  unsigned int lowlvl = danger;
   char *rangemsg = "Option -%c must be between 0 and %i.";
   char argerr = 1;
 
+  /* Sanity check numberic values */
   if (warning > 100) errx(argerr, rangemsg, 'w', 100);
   if (critical > 100) errx(argerr, rangemsg, 'c', 100);
   if (danger > 100) errx(argerr, rangemsg, 'd', 100);
   if (full > 100) errx(argerr, rangemsg, 'f', 100);
-  if (multiplier == 0) errx(argerr, "Option -m must be greater than 0");
+  if (multiplier <= 0) errx(argerr, "Option -m must be greater than 0");
 
+  /* Enssure levels are correctly ordered */
   if (warning && warning <= critical)
     errx(argerr, "Warning level must be greater than critical.");
   if (critical && critical <= danger)
     errx(argerr, "Critical level must be greater than danger.");
+
+  /* Find highest warning level */
+  if (warning || critical)
+    lowlvl = warning ? warning : critical;
+
+  /* Ensure the full level is higher than the warning levels */
+  if (full && full <= lowlvl)
+    errx(argerr, "Option -f must be greater than %i.", lowlvl);
 }
 
 int main(int argc, char *argv[])
@@ -222,10 +231,11 @@ int main(int argc, char *argv[])
     update_battery();
     duration = multiplier;
 
-    if (battery_discharging) {
+    if (battery_discharging) { /* discharging */
       if (danger && battery_level <= danger && battery_state != STATE_DANGER) {
         battery_state = STATE_DANGER;
-        if (dangercmd[0] != '\0') system(dangercmd);
+        if (dangercmd[0] != '\0')
+          system(dangercmd);
 
       } else if (critical && battery_level <= critical && battery_state != STATE_CRITICAL) {
         battery_state = STATE_CRITICAL;
@@ -248,7 +258,7 @@ int main(int argc, char *argv[])
         if (full && battery_level >= full && battery_state != STATE_FULL) {
             battery_state = STATE_FULL;
             notify(fullmsg);
-	}
+        }
     }
 
     sleep(duration);
