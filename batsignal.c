@@ -82,14 +82,14 @@ Options:\n\
 ", PROGNAME, PROGNAME);
 }
 
-void notify(char *msg)
+void notify(char *msg, NotifyUrgency urgency)
 {
   char body[20];
   sprintf(body, "Battery level: %u%%", battery_level);
 
   if (msg[0] != '\0' && notify_init(appname)) {
     NotifyNotification *notification = notify_notification_new(msg, body, NULL);
-    notify_notification_set_urgency(notification, NOTIFY_URGENCY_CRITICAL);
+    notify_notification_set_urgency(notification, urgency);
     notify_notification_set_timeout(notification, NOTIFY_EXPIRES_NEVER);
     notify_notification_show(notification, NULL);
     g_object_unref(notification);
@@ -239,13 +239,13 @@ int main(int argc, char *argv[])
 
       } else if (critical && battery_level <= critical && battery_state != STATE_CRITICAL) {
         battery_state = STATE_CRITICAL;
-        notify(criticalmsg);
+        notify(criticalmsg, NOTIFY_URGENCY_CRITICAL);
 
       } else if (warning && battery_level <= warning) {
         duration = (battery_level - critical) * multiplier;
         if (battery_state != STATE_WARNING) {
           battery_state = STATE_WARNING;
-          notify(warningmsg);
+          notify(warningmsg, NOTIFY_URGENCY_NORMAL);
         }
 
       } else {
@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
         battery_state = STATE_AC;
         if (full && battery_level >= full && battery_state != STATE_FULL) {
             battery_state = STATE_FULL;
-            notify(fullmsg);
+            notify(fullmsg, NOTIFY_URGENCY_NORMAL);
         }
     }
 
