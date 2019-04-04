@@ -29,6 +29,9 @@ critical battery LEVEL (default 5). Set to 0 disable this level
 .B \-d LEVEL
 battery danger LEVEL (default 2). Set to 0 disable this level
 .TP
+.B \-f LEVEL
+battery full LEVEL (default 95). Set to 0 disable this level
+.TP
 .B \-W MESSAGE
 show MESSAGE when battery is at warning level
 .TP
@@ -36,13 +39,19 @@ show MESSAGE when battery is at warning level
 show MESSAGE when battery is at critical level
 .TP
 .B \-D COMMAND
-Run COMMAND when battery is at danger level
+run COMMAND when battery is at danger level
+.TP
+.B \-F MESSAGE
+show MESSAGE when battery is at full level
 .TP
 .B \-n NAME
 battery device NAME (default BAT0)
 .TP
 .B \-m SECONDS
 minimum number of SECONDS (default 60) to wait between battery checks
+.TP
+.B \-a APP_NAME
+app name for notifications
 .SH AUTHORS
 Written by Corey Hinshaw and Aaron Marcher.
 .SH COPYRIGHT

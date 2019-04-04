@@ -13,6 +13,7 @@
 #define STATE_WARNING 2
 #define STATE_CRITICAL 3
 #define STATE_DANGER 4
+#define STATE_FULL 5
 
 /* program operation options */
 static char daemonize = 0;
@@ -31,14 +32,20 @@ static unsigned int multiplier = 60;
 static unsigned int warning = 15;
 static unsigned int critical = 5;
 static unsigned int danger = 2;
+static unsigned int full = 95;
 
 /* messages for warning and critical levels */
 static char *warningmsg = "Battery is low";
 static char *criticalmsg = "Battery is critically low";
 
+/* message for full battery */
+static char *fullmsg = "Battery is full";
+
 /* run this system command if battery reaches danger level */
 static char *dangercmd = "";
 
+/* app name for notification */
+static char *appname = PROGNAME;
 
 void print_version()
 {
@@ -62,14 +69,19 @@ Options:\n\
                    (default: 5)\n\
     -d LEVEL       battery danger LEVEL\n\
                    (default: 2)\n\
+    -f LEVEL       full battery LEVEL\n\
+                   (default: 95)\n\
     -W MESSAGE     show MESSAGE when battery is at warning level\n\
     -C MESSAGE     show MESSAGE when battery is at critical level\n\
     -D COMMAND     run COMMAND when battery is at danger level\n\
+    -F MESSAGE     show MESSAGE when battery is full\n\
     -n NAME        battery device NAME\n\
                    (default: BAT0)\n\
     -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
                    (default: 60)\n\
-", PROGNAME);
+    -a APP_NAME    specify app name for the notification\n\
+                   (default: %s)\n\
+", PROGNAME, PROGNAME);
 }
 
 void notify(char *msg)
@@ -77,7 +89,7 @@ void notify(char *msg)
   char body[20];
   sprintf(body, "Battery level: %u%%", battery_level);
 
-  if (msg[0] != '\0' && notify_init(PROGNAME)) {
+  if (msg[0] != '\0' && notify_init(appname)) {
     NotifyNotification *notification = notify_notification_new(msg, body, NULL);
     notify_notification_set_urgency(notification, NOTIFY_URGENCY_CRITICAL);
     notify_notification_set_timeout(notification, NOTIFY_EXPIRES_NEVER);
@@ -123,7 +135,7 @@ void parse_args(int argc, char *argv[])
 {
   int c;
 
-  while ((c = getopt(argc, argv, ":hvbiw:c:d:W:C:D:n:m:")) != -1) {
+  while ((c = getopt(argc, argv, ":hvbiw:c:d:f:W:C:D:F:n:m:a:")) != -1) {
     switch (c) {
       case 'h':
         print_help();
@@ -146,6 +158,9 @@ void parse_args(int argc, char *argv[])
       case 'd':
         danger = atoi(optarg);
         break;
+      case 'f':
+        full = atoi(optarg);
+        break;
       case 'W':
         warningmsg = optarg;
         break;
@@ -155,11 +170,17 @@ void parse_args(int argc, char *argv[])
       case 'D':
         dangercmd = optarg;
         break;
+      case 'F':
+        fullmsg = optarg;
+        break;
       case 'n':
         battery_name = optarg;
         break;
       case 'm':
         multiplier = atoi(optarg);
+        break;
+      case 'a':
+        appname = optarg;
         break;
       case '?':
         errx(1, "Unknown option `-%c'.", optopt);
@@ -177,6 +198,7 @@ void validate_options()
   if (warning > 100) errx(argerr, rangemsg, 'w', 100);
   if (critical > 100) errx(argerr, rangemsg, 'c', 100);
   if (danger > 100) errx(argerr, rangemsg, 'd', 100);
+  if (full > 100) errx(argerr, rangemsg, 'f', 100);
   if (multiplier == 0) errx(argerr, "Option -m must be greater than 0");
 
   if (warning && warning <= critical)
@@ -204,21 +226,29 @@ int main(int argc, char *argv[])
       if (danger && battery_level <= danger && battery_state != STATE_DANGER) {
         battery_state = STATE_DANGER;
         if (dangercmd[0] != '\0') system(dangercmd);
+
       } else if (critical && battery_level <= critical && battery_state != STATE_CRITICAL) {
         battery_state = STATE_CRITICAL;
         notify(criticalmsg);
+
       } else if (warning && battery_level <= warning) {
         duration = (battery_level - critical) * multiplier;
         if (battery_state != STATE_WARNING) {
           battery_state = STATE_WARNING;
           notify(warningmsg);
         }
+
       } else {
         battery_state = STATE_DISCHARGING;
         duration = (battery_level - warning) * multiplier;
       }
-    } else {
-      battery_state = STATE_AC;
+
+    } else { /* charging */
+        battery_state = STATE_AC;
+        if (full && battery_level >= full && battery_state != STATE_FULL) {
+            battery_state = STATE_FULL;
+            notify(fullmsg);
+	}
     }
 
     sleep(duration);
