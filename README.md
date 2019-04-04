@@ -19,7 +19,7 @@ Batsignal requires the following software to build:
 
   * C compiler (ie. GCC)
   * libnotify
-  ^ make
+  * make
 
 Installation
 ------------
