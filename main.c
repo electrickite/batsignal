@@ -1,9 +1,12 @@
 /* See LICENSE file for copyright and license details. */
 
-#include <stdlib.h>
-#include <stdio.h>
+#include <dirent.h>
 #include <err.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <libnotify/notify.h>
+#include "version.h"
 
 #define PROGNAME "batsignal"
 
@@ -15,15 +18,20 @@
 #define STATE_DANGER 4
 #define STATE_FULL 5
 
+/* system paths */
+#define POWER_SUPPLY_SUBSYSTEM "/sys/class/power_supply"
+
 /* program operation options */
-static char daemonize = 0;
-static char battery_required = 1;
+static unsigned char daemonize = 0;
+static unsigned char battery_required = 1;
+static unsigned char battery_name_specified = 0;
 
 /* battery information */
 static char *battery_name = "BAT0";
-static char battery_discharging = 0;
-static char battery_state = STATE_AC;
+static unsigned char battery_discharging = 0;
+static unsigned char battery_state = STATE_AC;
 static unsigned int battery_level = 100;
+static char *attr_path;
 
 /* check frequency multiplier (seconds) */
 static unsigned int multiplier = 60;
@@ -73,7 +81,7 @@ Options:\n\
     -C MESSAGE     show MESSAGE when battery is at critical level\n\
     -D COMMAND     run COMMAND when battery is at danger level\n\
     -F MESSAGE     show MESSAGE when battery is full\n\
-    -n NAME        battery device NAME\n\
+    -n NAME        use battery NAME\n\
                    (default: BAT0)\n\
     -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
                    (default: 60)\n\
@@ -100,14 +108,13 @@ void notify(char *msg, NotifyUrgency urgency)
 void update_battery()
 {
   char state[12];
-  char *path = malloc(strlen(battery_name) + 35);
   FILE *file;
 
-  sprintf(path, "/sys/class/power_supply/%s/status", battery_name);
-  file = fopen(path, "r");
+  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/status", battery_name);
+  file = fopen(attr_path, "r");
   if (file == NULL) {
     if (battery_required)
-      err(3, "Could not open %s", path);
+      err(EXIT_FAILURE, "Could not open %s", attr_path);
     battery_discharging = 0;
     return;
   }
@@ -116,22 +123,20 @@ void update_battery()
 
   battery_discharging = strcmp(state, "Discharging") == 0;
 
-  sprintf(path, "/sys/class/power_supply/%s/capacity", battery_name);
-  file = fopen(path, "r");
+  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/capacity", battery_name);
+  file = fopen(attr_path, "r");
   if (file == NULL) {
     if (battery_required)
-      err(3, "Could not open %s", path);
+      err(EXIT_FAILURE, "Could not open %s", attr_path);
     return;
   }
   fscanf(file, "%u", &battery_level);
   fclose(file);
-
-  free(path);
 }
 
 void parse_args(int argc, char *argv[])
 {
-  int c;
+  signed int c;
 
   while ((c = getopt(argc, argv, ":hvbiw:c:d:f:W:C:D:F:n:m:a:")) != -1) {
     switch (c) {
@@ -172,6 +177,7 @@ void parse_args(int argc, char *argv[])
         fullmsg = optarg;
         break;
       case 'n':
+        battery_name_specified = 1;
         battery_name = optarg;
         break;
       case 'm':
@@ -181,9 +187,9 @@ void parse_args(int argc, char *argv[])
         appname = optarg;
         break;
       case '?':
-        errx(1, "Unknown option `-%c'.", optopt);
+        errx(EXIT_FAILURE, "Unknown option `-%c'.", optopt);
       case ':':
-        errx(1, "Option -%c requires an argument.", optopt);
+        errx(EXIT_FAILURE, "Option -%c requires an argument.", optopt);
     }
   }
 }
@@ -192,20 +198,19 @@ void validate_options()
 {
   unsigned int lowlvl = danger;
   char *rangemsg = "Option -%c must be between 0 and %i.";
-  char argerr = 1;
 
   /* Sanity check numberic values */
-  if (warning > 100) errx(argerr, rangemsg, 'w', 100);
-  if (critical > 100) errx(argerr, rangemsg, 'c', 100);
-  if (danger > 100) errx(argerr, rangemsg, 'd', 100);
-  if (full > 100) errx(argerr, rangemsg, 'f', 100);
-  if (multiplier <= 0) errx(argerr, "Option -m must be greater than 0");
+  if (warning > 100) errx(EXIT_FAILURE, rangemsg, 'w', 100);
+  if (critical > 100) errx(EXIT_FAILURE, rangemsg, 'c', 100);
+  if (danger > 100) errx(EXIT_FAILURE, rangemsg, 'd', 100);
+  if (full > 100) errx(EXIT_FAILURE, rangemsg, 'f', 100);
+  if (multiplier <= 0) errx(EXIT_FAILURE, "Option -m must be greater than 0");
 
   /* Enssure levels are correctly ordered */
   if (warning && warning <= critical)
-    errx(argerr, "Warning level must be greater than critical.");
+    errx(EXIT_FAILURE, "Warning level must be greater than critical.");
   if (critical && critical <= danger)
-    errx(argerr, "Critical level must be greater than danger.");
+    errx(EXIT_FAILURE, "Critical level must be greater than danger.");
 
   /* Find highest warning level */
   if (warning || critical)
@@ -213,18 +218,78 @@ void validate_options()
 
   /* Ensure the full level is higher than the warning levels */
   if (full && full <= lowlvl)
-    errx(argerr, "Option -f must be greater than %i.", lowlvl);
+    errx(EXIT_FAILURE, "Option -f must be greater than %i.", lowlvl);
+}
+
+unsigned char is_battery(char *name)
+{
+  FILE *file;
+  char type[10] = "";
+
+  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/type", name);
+  file = fopen(attr_path, "r");
+  if (file != NULL) {
+    fscanf(file, "%10s", type);
+    fclose(file);
+  }
+  return strcmp(type, "Battery") == 0;
+}
+
+void find_battery()
+{
+  unsigned int path_len = strlen(POWER_SUPPLY_SUBSYSTEM) + 15;
+  unsigned int name_len = strlen(battery_name);
+  unsigned int entry_name_len = 0;
+  DIR *dir;
+  struct dirent *entry;
+
+  attr_path = malloc(path_len + name_len);
+  if (attr_path == NULL)
+    err(EXIT_FAILURE, "Memory allocation failed");
+
+  if (is_battery(battery_name)) {
+    return;
+  } else if (battery_name_specified) {
+    goto nobat;
+  }
+
+  dir = opendir(POWER_SUPPLY_SUBSYSTEM);
+  if (dir) {
+    while ((entry = readdir(dir)) != NULL) {
+      entry_name_len = strlen(entry->d_name);
+      if (entry_name_len > name_len) {
+        name_len = entry_name_len;
+        attr_path = realloc(attr_path, path_len + name_len);
+        if (attr_path == NULL)
+          err(EXIT_FAILURE, "Memory allocation failed");
+      }
+      if (is_battery(entry->d_name)) {
+        battery_name = strdup(entry->d_name);
+        if (battery_name == NULL)
+          err(EXIT_FAILURE, "Memory allocation failed");
+        closedir(dir);
+        return;
+      }
+    }
+    closedir(dir);
+  }
+
+nobat:
+  if (battery_required)
+    err(EXIT_FAILURE, "Battery %s not found", battery_name);
 }
 
 int main(int argc, char *argv[])
 {
-  int duration;
+  unsigned int duration;
 
   parse_args(argc, argv);
   validate_options();
+  find_battery();
+  printf("Using battery: %s\n", battery_name);
 
   if (daemonize && daemon(1, 1) < 0) {
-    err(2, "daemon");
+    err(EXIT_FAILURE, "Failed to daemonize");
   }
 
   for(;;) {
@@ -264,5 +329,5 @@ int main(int argc, char *argv[])
     sleep(duration);
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

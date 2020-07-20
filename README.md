@@ -13,13 +13,16 @@ order to use as few system resources as possible, fewer battery checks are
 performed while the battery is discharging and the level of charge is not near a
 warning level.
 
+By default, batsignal will attempt to detect the correct battery to monitor.
+
 Requirements
 ------------
 Batsignal requires the following software to build:
 
-  * C compiler (ie. GCC)
+  * C compiler (GCC)
   * libnotify
   * make
+  * pkg-config
 
 Installation
 ------------
@@ -38,7 +41,7 @@ Aaron Marcher.
 
 License and Copyright
 ---------------------
-Copyright 2018-2019 Corey Hinshaw
+Copyright 2018-2020 Corey Hinshaw
 Copyright 2016-2017 Aaron Marcher
 
 Permission to use, copy, modify, and/or distribute this software for any

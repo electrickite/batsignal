@@ -1,57 +1,41 @@
-# See LICENSE file for copyright and license details.
+.POSIX:
 
-include config.mk
+NAME = batsignal
 
-NAME=batsignal
+VERSION = $(shell grep VERSION version.h | cut -d \" -f2)
 
-SRC = ${NAME}.c
-OBJ = ${SRC:.c=.o}
+PREFIX = /usr/local
+MANPREFIX = $(PREFIX)/share/man
 
-all: options ${NAME}
+CC = cc
+LD = ld
+CFLAGS = -std=c99 -pedantic -Wall -Wextra -Werror -Wno-unused-parameter -Os -s -D_GNU_SOURCE $(shell pkg-config --cflags libnotify)
+LDLIBS = $(shell pkg-config --libs libnotify)
 
-options:
-	@echo ${NAME} build options:
-	@echo "CFLAGS   = ${CFLAGS}"
-	@echo "LDFLAGS  = ${LDFLAGS}"
-	@echo "CC       = ${CC}"
+SRC = main.c version.h
+OBJ = main.o
 
-.c.o:
-	@echo CC $<
-	@${CC} -c ${CFLAGS} $<
+all: $(NAME)
 
-${OBJ}: config.mk
+$(NAME): $(OBJ)
+	$(CC) $(LDLIBS) -o $(NAME) $(OBJ) $(LDFLAGS)
 
-${NAME}: ${OBJ}
-	@echo CC -o $@
-	@${CC} -o $@ ${OBJ} ${LDFLAGS}
+$(OBJ): $(SRC)
 
 clean:
 	@echo cleaning
-	@rm -f ${NAME} ${OBJ} ${NAME}-${VERSION}.tar.gz
-
-dist: clean
-	@echo creating dist tarball
-	@mkdir -p ${NAME}-${VERSION}
-	@cp -R Makefile config.mk LICENSE \
-		${SRC} ${NAME}-${VERSION}
-	@tar -cf ${NAME}-${VERSION}.tar ${NAME}-${VERSION}
-	@gzip ${NAME}-${VERSION}.tar
-	@rm -rf ${NAME}-${VERSION}
+	$(RM) $(NAME) $(OBJ)
 
 install: all
-	@echo installing executable file to ${DESTDIR}${PREFIX}/bin
-	@mkdir -p ${DESTDIR}${PREFIX}/bin
-	@cp -f ${NAME} ${DESTDIR}${PREFIX}/bin
-	@chmod 755 ${DESTDIR}${PREFIX}/bin/${NAME}
-	@echo installing manual page to ${DESTDIR}${MANPREFIX}/man1
-	@mkdir -p ${DESTDIR}${MANPREFIX}/man1
-	@sed "s/VERSION/${VERSION}/g" < ${NAME}.1 > ${DESTDIR}${MANPREFIX}/man1/${NAME}.1
-	@chmod 644 ${DESTDIR}${MANPREFIX}/man1/${NAME}.1
+	@echo installing in $(DESTDIR)$(PREFIX)
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	cp -f $(NAME) $(DESTDIR)$(PREFIX)/bin
+	chmod 755 $(DESTDIR)$(PREFIX)/bin/$(NAME)
+	mkdir -p $(DESTDIR)$(MANPREFIX)/man1
+	sed "s/VERSION/$(VERSION)/g" < $(NAME).1 > $(DESTDIR)$(MANPREFIX)/man1/$(NAME).1
+	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/$(NAME).1
 
 uninstall:
-	@echo removing executable file from ${DESTDIR}${PREFIX}/bin
-	@rm -f ${DESTDIR}${PREFIX}/bin/${NAME}
-	@echo removing manual page from ${DESTDIR}${MANPREFIX}/man1
-	@rm -f ${DESTDIR}${MANPREFIX}/man1/${NAME}.1
-
-.PHONY: all options clean dist install uninstall
+	@echo removing files from $(DESTDIR)$(PREFIX)
+	$(RM) $(DESTDIR)$(PREFIX)/bin/$(NAME)
+	$(RM) $(DESTDIR)$(MANPREFIX)/man1/$(NAME).1
