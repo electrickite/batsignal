@@ -112,26 +112,27 @@ void update_battery()
 
   sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/status", battery_name);
   file = fopen(attr_path, "r");
-  if (file == NULL) {
+  if (file == NULL || fscanf(file, "%12s", state) == 0) {
     if (battery_required)
-      err(EXIT_FAILURE, "Could not open %s", attr_path);
+      err(EXIT_FAILURE, "Could not read %s", attr_path);
     battery_discharging = 0;
-    return;
+    goto cleanup;
   }
-  fscanf(file, "%12s", state);
   fclose(file);
 
   battery_discharging = strcmp(state, "Discharging") == 0;
 
   sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/capacity", battery_name);
   file = fopen(attr_path, "r");
-  if (file == NULL) {
+  if (file == NULL || fscanf(file, "%u", &battery_level) == 0) {
     if (battery_required)
-      err(EXIT_FAILURE, "Could not open %s", attr_path);
-    return;
+      err(EXIT_FAILURE, "Could not read %s", attr_path);
   }
-  fscanf(file, "%u", &battery_level);
-  fclose(file);
+
+cleanup:
+  if (file) {
+    fclose(file);
+  }
 }
 
 void parse_args(int argc, char *argv[])
@@ -229,7 +230,7 @@ unsigned char is_battery(char *name)
   sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/type", name);
   file = fopen(attr_path, "r");
   if (file != NULL) {
-    fscanf(file, "%10s", type);
+    if (fscanf(file, "%10s", type) == 0) { /* Continue... */ }
     fclose(file);
   }
   return strcmp(type, "Battery") == 0;
@@ -300,7 +301,7 @@ int main(int argc, char *argv[])
       if (danger && battery_level <= danger && battery_state != STATE_DANGER) {
         battery_state = STATE_DANGER;
         if (dangercmd[0] != '\0')
-          system(dangercmd);
+          if (system(dangercmd) == -1) { /* Ignore command errors... */ }
 
       } else if (critical && battery_level <= critical && battery_state != STATE_CRITICAL) {
         battery_state = STATE_CRITICAL;
