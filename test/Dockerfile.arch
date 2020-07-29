@@ -1,0 +1,10 @@
+FROM archlinux:latest
+RUN pacman -Syu --noconfirm \
+    gcc \
+    libnotify \
+    make \
+    pkgconf \
+ && pacman -Scc --noconfirm
+COPY . /build
+RUN cd /build && make clean install
+CMD ["batsignal", "-v"]

@@ -1,0 +1,12 @@
+FROM ubuntu:latest
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive TZ=America/New_York \
+    apt-get install -y \
+    gcc \
+    libnotify-dev \
+    make \
+    pkg-config \
+ && rm -rf /var/lib/apt/lists/*
+COPY . /build
+RUN cd /build && make clean install
+CMD ["batsignal", "-v"]

@@ -1,0 +1,11 @@
+FROM fedora:latest
+RUN dnf -y install \
+    gcc \
+    libnotify \
+    libnotify-devel \
+    make \
+    pkg-config \
+ && dnf clean all
+COPY . /build
+RUN cd /build && make clean install
+CMD ["batsignal", "-v"]
