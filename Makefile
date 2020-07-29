@@ -22,10 +22,6 @@ $(NAME): $(OBJ)
 
 $(OBJ): $(SRC)
 
-clean:
-	@echo Cleaning build files
-	$(RM) $(NAME) $(OBJ)
-
 install: all
 	@echo Installing in $(DESTDIR)$(PREFIX)
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -40,33 +36,25 @@ uninstall:
 	$(RM) $(DESTDIR)$(PREFIX)/bin/$(NAME)
 	$(RM) $(DESTDIR)$(MANPREFIX)/man1/$(NAME).1
 
-compile-test:
-	@echo Starting compile test on Arch, Debian \(Stable, Testing\), Ubuntu, Fedora
-	docker build --label=$(NAME)-arch --tag=$(NAME)-arch --file=test/Dockerfile.arch .
-	docker run -it $(NAME)-arch
-	docker build --label=$(NAME)-debian-stable --tag=$(NAME)-debian-stable --file=test/Dockerfile.debian-stable .
-	docker run -it $(NAME)-debian-stable
-	docker build --label=$(NAME)-debian-testing --tag=$(NAME)-debian-testing --file=test/Dockerfile.debian-testing .
-	docker run -it $(NAME)-debian-testing
-	docker build --label=$(NAME)-ubuntu-latest --tag=$(NAME)-ubuntu-latest --file=test/Dockerfile.ubuntu-latest .
-	docker run -it $(NAME)-ubuntu-latest
-	docker build --label=$(NAME)-fedora-latest --tag=$(NAME)-fedora-latest --file=test/Dockerfile.fedora-latest .
-	docker run -it $(NAME)-fedora-latest
-	@echo Completed compile testing
+clean-all: clean clean-images
+
+clean:
+	@echo Cleaning build files
+	$(RM) $(NAME) $(OBJ)
+
+clean-images: arch-clean debian-stable-clean debian-testing-clean ubuntu-latest-clean fedora-latest-clean
+
+%-clean: test/Dockerfile.%
+	@echo Removing images for $*
+	-docker container prune --force --filter="label=$(NAME)-$*"
+	-docker rmi -f $(NAME)-$*
 
 test: compile-test
 
-clean-images:
-	@echo Cleaning docker images
-	-docker container prune --force --filter="label=$(NAME)-arch"
-	-docker rmi -f $(NAME)-arch
-	-docker container prune --force --filter="label=$(NAME)-debian-stable"
-	-docker rmi -f $(NAME)-debian-stable
-	-docker container prune --force --filter="label=$(NAME)-debian-testing"
-	-docker rmi -f $(NAME)-debian-testing
-	-docker container prune --force --filter="label=$(NAME)-ubuntu-latest"
-	-docker rmi -f $(NAME)-ubuntu-latest
-	-docker container prune --force --filter="label=$(NAME)-fedora-latest"
-	-docker rmi -f $(NAME)-fedora-latest
+compile-test: arch-test debian-stable-test debian-testing-test ubuntu-latest-test fedora-latest-test
+	@echo Completed compile testing
 
-clean-all: clean clean-images
+%-test: test/Dockerfile.%
+	@echo Starting compile test for $*
+	docker build --label=$(NAME)-$* --tag=$(NAME)-$* --file=$< .
+	docker run -it $(NAME)-$*
