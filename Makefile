@@ -18,9 +18,10 @@ OBJ = main.o
 all: $(NAME)
 
 $(NAME): $(OBJ)
-	$(CC) -o $(NAME) $(OBJ) $(LDLIBS) $(LDFLAGS)
+	$(CC) -o $(NAME) $(OBJ) $(CFLAGS) $(EXTRA_CFLAGS) $(LDLIBS) $(LDFLAGS)
 
 $(OBJ): $(SRC)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(EXTRA_CFLAGS) -c -o $@ $<
 
 install: all
 	@echo Installing in $(DESTDIR)$(PREFIX)
