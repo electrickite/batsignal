@@ -112,9 +112,9 @@ void notify(char *msg, NotifyUrgency urgency)
   sprintf(body, "Battery level: %u%%", battery_level);
 
   if (msg[0] != '\0' && notify_init(appname)) {
-    NotifyNotification *notification = notify_notification_new(msg, body, NULL);
+    NotifyNotification *notification = notify_notification_new(msg, body, "battery-level-10-symbolic");
     notify_notification_set_urgency(notification, urgency);
-    notify_notification_set_timeout(notification, NOTIFY_EXPIRES_NEVER);
+    notify_notification_set_timeout(notification, NOTIFY_EXPIRES_DEFAULT
     notify_notification_show(notification, NULL);
     g_object_unref(notification);
     notify_uninit();
