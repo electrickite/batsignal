@@ -1,4 +1,5 @@
 batsignal
+batsignal.1
 *.o
 *.tar.gz
 *.supp

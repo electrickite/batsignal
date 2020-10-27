@@ -1,5 +1,6 @@
 /* See LICENSE file for copyright and license details. */
 
+#define _GNU_SOURCE
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
