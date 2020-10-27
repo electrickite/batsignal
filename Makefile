@@ -9,21 +9,22 @@ MANPREFIX = $(PREFIX)/share/man
 
 CFLAGS_EXTRA = -pedantic -Wall -Wextra -Werror -Wno-unused-parameter -Os -s
 CFLAGS := $(CFLAGS_EXTRA) $(CFLAGS) -std=c99 $(shell pkg-config --cflags libnotify)
-LDFLAGS := $(LDFLAGS) $(shell pkg-config --libs libnotify)
+LDFLAGS := $(shell pkg-config --libs libnotify) $(LDFLAGS)
 
 all: $(NAME) $(NAME).1
 
 $(NAME).o: version.h
 
 $(NAME): $(NAME).o
+	$(CC) -o $(NAME) $(NAME).o $(LDFLAGS)
 
 $(NAME).1: $(NAME).1.in
 	sed "s/VERSION/$(VERSION)/g" < $< > $@
 
 install: all
 	@echo Installing in $(DESTDIR)$(PREFIX)
-	install -Dm755 $(NAME) $(DESTDIR)$(PREFIX)/bin/
-	install -Dm644 $(NAME).1 $(DESTDIR)$(MANPREFIX)/man1/
+	install -Dm755 -t $(DESTDIR)$(PREFIX)/bin $(NAME)
+	install -Dm644 -t $(DESTDIR)$(MANPREFIX)/man1 $(NAME).1
 
 uninstall:
 	@echo Removing files from $(DESTDIR)$(PREFIX)
