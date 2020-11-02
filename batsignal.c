@@ -70,7 +70,7 @@ static char *dangercmd = "";
 static char *appname = PROGNAME;
 
 /* specify if an icon should be shown in the notification */
-static int use_icon = 0;
+static char *icon = NULL;
 
 /* specify when the notification should expire */
 static int notification_expires = NOTIFY_EXPIRES_NEVER;
@@ -109,8 +109,8 @@ Options:\n\
                    (default: 60)\n\
     -a NAME        app NAME used in desktop notifications\n\
                    (default: %s)\n\
-    -I             show an icon in the notification\n\
-    -e             use default notification expiring duration\n\
+    -I NAME        display specified icon in notifications\n\
+    -e             use default notifications expiring duration\n\
 ", PROGNAME, PROGNAME);
 }
 
@@ -120,11 +120,6 @@ void notify(char *msg, NotifyUrgency urgency)
   sprintf(body, "Battery level: %u%%", battery_level);
 
   if (msg[0] != '\0' && notify_init(appname)) {
-    char *icon = NULL;
-    if (use_icon) {
-        icon = "battery-level-10-symbolic";
-    }
-
     if (notification_expires == NOTIFY_EXPIRES_NEVER) {
         printf("never\n");
     } else {
@@ -174,7 +169,7 @@ void parse_args(int argc, char *argv[])
 {
   signed int c;
 
-  while ((c = getopt(argc, argv, ":hvbiIew:c:d:f:W:C:D:F:n:m:a:")) != -1) {
+  while ((c = getopt(argc, argv, ":hvbiew:c:d:f:W:C:D:F:n:m:a:I:")) != -1) {
     switch (c) {
       case 'h':
         print_help();
@@ -223,7 +218,7 @@ void parse_args(int argc, char *argv[])
         appname = optarg;
         break;
       case 'I':
-        use_icon = 1;
+        icon = optarg;
         break;
       case 'e':
         notification_expires = NOTIFY_EXPIRES_DEFAULT;
