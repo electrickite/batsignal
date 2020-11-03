@@ -69,7 +69,7 @@ static char *dangercmd = "";
 /* app name for notification */
 static char *appname = PROGNAME;
 
-/* specify if an icon should be shown in the notification */
+/* specify the icon used in notifications */
 static char *icon = NULL;
 
 /* specify when the notification should expire */
@@ -120,12 +120,6 @@ void notify(char *msg, NotifyUrgency urgency)
   sprintf(body, "Battery level: %u%%", battery_level);
 
   if (msg[0] != '\0' && notify_init(appname)) {
-    if (notification_expires == NOTIFY_EXPIRES_NEVER) {
-        printf("never\n");
-    } else {
-        printf("default\n");
-    }
-
     NotifyNotification *notification = notify_notification_new(msg, body, icon);
     notify_notification_set_urgency(notification, urgency);
     notify_notification_set_timeout(notification, notification_expires);
