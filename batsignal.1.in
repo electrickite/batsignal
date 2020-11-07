@@ -20,6 +20,9 @@ run batsignal as background daemon
 .B \-i
 ignore missing battery errors
 .TP
+.B \-e
+cause notifications to expire
+.TP
 .B \-w LEVEL
 battery warning LEVEL (default 15). 0 disables this level
 .TP
@@ -52,6 +55,9 @@ minimum number of SECONDS (default 60) to wait between battery checks
 .TP
 .B \-a APP_NAME
 app name used in notifications (default: batsignal)
+.TP
+.B \-I ICON
+display specified ICON in notifications
 .SH AUTHORS
 Written by Corey Hinshaw. Based on juiced by Aaron Marcher.
 .SH COPYRIGHT

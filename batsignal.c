@@ -91,6 +91,7 @@ Options:\n\
     -v             print program version information\n\
     -b             run as background daemon\n\
     -i             ignore missing battery errors\n\
+    -e             cause notifications to expire\n\
     -w LEVEL       battery warning LEVEL\n\
                    (default: 15)\n\
     -c LEVEL       critical battery LEVEL\n\
@@ -109,8 +110,7 @@ Options:\n\
                    (default: 60)\n\
     -a NAME        app NAME used in desktop notifications\n\
                    (default: %s)\n\
-    -I NAME        display specified icon in notifications\n\
-    -e             use default notifications expiring duration\n\
+    -I ICON        display specified ICON in notifications\n\
 ", PROGNAME, PROGNAME);
 }
 
