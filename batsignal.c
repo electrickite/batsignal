@@ -69,6 +69,12 @@ static char *dangercmd = "";
 /* app name for notification */
 static char *appname = PROGNAME;
 
+/* specify the icon used in notifications */
+static char *icon = NULL;
+
+/* specify when the notification should expire */
+static int notification_expires = NOTIFY_EXPIRES_NEVER;
+
 void print_version()
 {
   printf("%s %s\n", PROGNAME, VERSION);
@@ -103,6 +109,8 @@ Options:\n\
                    (default: 60)\n\
     -a NAME        app NAME used in desktop notifications\n\
                    (default: %s)\n\
+    -I NAME        display specified icon in notifications\n\
+    -e             use default notifications expiring duration\n\
 ", PROGNAME, PROGNAME);
 }
 
@@ -112,9 +120,9 @@ void notify(char *msg, NotifyUrgency urgency)
   sprintf(body, "Battery level: %u%%", battery_level);
 
   if (msg[0] != '\0' && notify_init(appname)) {
-    NotifyNotification *notification = notify_notification_new(msg, body, NULL);
+    NotifyNotification *notification = notify_notification_new(msg, body, icon);
     notify_notification_set_urgency(notification, urgency);
-    notify_notification_set_timeout(notification, NOTIFY_EXPIRES_NEVER);
+    notify_notification_set_timeout(notification, notification_expires);
     notify_notification_show(notification, NULL);
     g_object_unref(notification);
     notify_uninit();
@@ -155,7 +163,7 @@ void parse_args(int argc, char *argv[])
 {
   signed int c;
 
-  while ((c = getopt(argc, argv, ":hvbiw:c:d:f:W:C:D:F:n:m:a:")) != -1) {
+  while ((c = getopt(argc, argv, ":hvbiew:c:d:f:W:C:D:F:n:m:a:I:")) != -1) {
     switch (c) {
       case 'h':
         print_help();
@@ -202,6 +210,12 @@ void parse_args(int argc, char *argv[])
         break;
       case 'a':
         appname = optarg;
+        break;
+      case 'I':
+        icon = optarg;
+        break;
+      case 'e':
+        notification_expires = NOTIFY_EXPIRES_DEFAULT;
         break;
       case '?':
         errx(EXIT_FAILURE, "Unknown option `-%c'.", optopt);
