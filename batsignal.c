@@ -80,43 +80,47 @@ static char *icon = NULL;
 /* specify when the notification should expire */
 static int notification_expires = NOTIFY_EXPIRES_NEVER;
 
-void print_version() { printf("%s %s\n", PROGNAME, VERSION); }
-
-void print_help() {
-  printf("Usage: %s [OPTIONS]\n\
-            \n\
-            Sends battery level notifications.\n\
-            \n\
-            Options:\n\
-            -h             print this help message\n\
-            -v             print program version information\n\
-            -b             run as background daemon\n\
-            -i             ignore missing battery errors\n\
-            -e             cause notifications to expire\n\
-            -w LEVEL       battery warning LEVEL\n\
-            (default: 15)\n\
-            -c LEVEL       critical battery LEVEL\n\
-            (default: 5)\n\
-            -d LEVEL       battery danger LEVEL\n\
-            (default: 2)\n\
-            -f LEVEL       full battery LEVEL\n\
-            (default: disabled)\n\
-            -W MESSAGE     show MESSAGE when battery is at warning level\n\
-            -C MESSAGE     show MESSAGE when battery is at critical level\n\
-            -D COMMAND     run COMMAND when battery is at danger level\n\
-            -F MESSAGE     show MESSAGE when battery is full\n\
-            -n NAME        use battery NAME\n\
-            (default: BAT0)\n\
-            -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
-            (default: 60)\n\
-            -a NAME        app NAME used in desktop notifications\n\
-            (default: %s)\n\
-            -I ICON        display specified ICON in notifications\n\
-            ",
-         PROGNAME, PROGNAME);
+void print_version()
+{
+  printf("%s %s\n", PROGNAME, VERSION);
 }
 
-void notify(char *msg, NotifyUrgency urgency) {
+void print_help()
+{
+  printf("Usage: %s [OPTIONS]\n\
+\n\
+Sends battery level notifications.\n\
+\n\
+Options:\n\
+    -h             print this help message\n\
+    -v             print program version information\n\
+    -b             run as background daemon\n\
+    -i             ignore missing battery errors\n\
+    -e             cause notifications to expire\n\
+    -w LEVEL       battery warning LEVEL\n\
+                   (default: 15)\n\
+    -c LEVEL       critical battery LEVEL\n\
+                   (default: 5)\n\
+    -d LEVEL       battery danger LEVEL\n\
+                   (default: 2)\n\
+    -f LEVEL       full battery LEVEL\n\
+                   (default: disabled)\n\
+    -W MESSAGE     show MESSAGE when battery is at warning level\n\
+    -C MESSAGE     show MESSAGE when battery is at critical level\n\
+    -D COMMAND     run COMMAND when battery is at danger level\n\
+    -F MESSAGE     show MESSAGE when battery is full\n\
+    -n NAME        use battery NAME\n\
+                   (default: BAT0)\n\
+    -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
+                   (default: 60)\n\
+    -a NAME        app NAME used in desktop notifications\n\
+                   (default: %s)\n\
+    -I ICON        display specified ICON in notifications\n\
+", PROGNAME, PROGNAME);
+}
+
+void notify(char *msg, NotifyUrgency urgency)
+{
   char body[20];
   sprintf(body, "Battery level: %u%%", battery_level);
 
@@ -130,7 +134,8 @@ void notify(char *msg, NotifyUrgency urgency) {
   }
 }
 
-void update_battery() {
+void update_battery()
+{
   char state[12];
   unsigned int tmp;
   FILE *file;
@@ -174,7 +179,8 @@ void update_battery() {
   printf("Battery level: %d\n", battery_level);
 }
 
-int split(char *in, char delim, char ***out) {
+int split(char *in, char delim, char ***out)
+{
   printf("%s\n", in);
   int count = 1;
 
@@ -203,88 +209,85 @@ int split(char *in, char delim, char ***out) {
   return count;
 }
 
-void parse_args(int argc, char *argv[]) {
+void parse_args(int argc, char *argv[])
+{
   signed int c;
 
   while ((c = getopt(argc, argv, "-:hvbiew:c:d:f:W:C:D:F:n:m:a:I:")) != -1) {
     switch (c) {
-    case 'h':
-      print_help();
-      exit(0);
-    case 'v':
-      print_version();
-      exit(0);
-    case 'b':
-      daemonize = 1;
-      break;
-    case 'i':
-      battery_required = 0;
-      break;
-    case 'w':
-      warning = atoi(optarg);
-      break;
-    case 'c':
-      critical = atoi(optarg);
-      break;
-    case 'd':
-      danger = atoi(optarg);
-      break;
-    case 'f':
-      full = atoi(optarg);
-      break;
-    case 'W':
-      warningmsg = optarg;
-      break;
-    case 'C':
-      criticalmsg = optarg;
-      break;
-    case 'D':
-      dangercmd = optarg;
-      break;
-    case 'F':
-      fullmsg = optarg;
-      break;
-    case 'n':
-      battery_name_specified = 1;
-      amount_batteries = split(optarg, ',', &battery_names);
-      break;
-    case 'm':
-      multiplier = atoi(optarg);
-      break;
-    case 'a':
-      appname = optarg;
-      break;
-    case 'I':
-      icon = optarg;
-      break;
-    case 'e':
-      notification_expires = NOTIFY_EXPIRES_DEFAULT;
-      break;
-    case '?':
-      errx(EXIT_FAILURE, "Unknown option `-%c'.", optopt);
-    case ':':
-      errx(EXIT_FAILURE, "Option -%c requires an argument.", optopt);
-    case 1:
-      errx(EXIT_FAILURE, "Unknown argument %s.", optarg);
+      case 'h':
+        print_help();
+        exit(0);
+      case 'v':
+        print_version();
+        exit(0);
+      case 'b':
+        daemonize = 1;
+        break;
+      case 'i':
+        battery_required = 0;
+        break;
+      case 'w':
+        warning = atoi(optarg);
+        break;
+      case 'c':
+        critical = atoi(optarg);
+        break;
+      case 'd':
+        danger = atoi(optarg);
+        break;
+      case 'f':
+        full = atoi(optarg);
+        break;
+      case 'W':
+        warningmsg = optarg;
+        break;
+      case 'C':
+        criticalmsg = optarg;
+        break;
+      case 'D':
+        dangercmd = optarg;
+        break;
+      case 'F':
+        fullmsg = optarg;
+        break;
+      case 'n':
+        battery_name_specified = 1;
+        amount_batteries = split(optarg, ',', &battery_names);
+        break;
+      case 'm':
+        multiplier = atoi(optarg);
+        break;
+      case 'a':
+        appname = optarg;
+        break;
+      case 'I':
+        icon = optarg;
+        break;
+      case 'e':
+        notification_expires = NOTIFY_EXPIRES_DEFAULT;
+        break;
+      case '?':
+        errx(EXIT_FAILURE, "Unknown option `-%c'.", optopt);
+      case ':':
+        errx(EXIT_FAILURE, "Option -%c requires an argument.", optopt);
+      case 1:
+        errx(EXIT_FAILURE, "Unknown argument %s.", optarg);
     }
   }
 }
 
-void validate_options() {
+void validate_options()
+{
   unsigned int lowlvl = danger;
   char *rangemsg = "Option -%c must be between 0 and %i.";
 
   /* Sanity check numberic values */
-  if (warning > 100)
-    errx(EXIT_FAILURE, rangemsg, 'w', 100);
-  if (critical > 100)
-    errx(EXIT_FAILURE, rangemsg, 'c', 100);
-  if (danger > 100)
-    errx(EXIT_FAILURE, rangemsg, 'd', 100);
-  if (full > 100)
-    errx(EXIT_FAILURE, rangemsg, 'f', 100);
-  if (multiplier <= 0)
-    errx(EXIT_FAILURE, "Option -m must be greater than 0");
+  if (warning > 100) errx(EXIT_FAILURE, rangemsg, 'w', 100);
+  if (critical > 100) errx(EXIT_FAILURE, rangemsg, 'c', 100);
+  if (danger > 100) errx(EXIT_FAILURE, rangemsg, 'd', 100);
+  if (full > 100) errx(EXIT_FAILURE, rangemsg, 'f', 100);
+  if (multiplier <= 0) errx(EXIT_FAILURE, "Option -m must be greater than 0");
 
   /* Enssure levels are correctly ordered */
   if (warning && warning <= critical)
@@ -301,21 +304,22 @@ void validate_options() {
     errx(EXIT_FAILURE, "Option -f must be greater than %i.", lowlvl);
 }
 
-unsigned char is_battery(char *name) {
+unsigned char is_battery(char *name)
+{
   FILE *file;
   char type[10] = "";
 
   sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/type", name);
   file = fopen(attr_path, "r");
   if (file != NULL) {
-    if (fscanf(file, "%10s", type) == 0) { /* Continue... */
-    }
+    if (fscanf(file, "%10s", type) == 0) { /* Continue... */ }
     fclose(file);
   }
   return strcmp(type, "Battery") == 0;
 }
 
-void find_batteries() {
+void find_batteries()
+{
   unsigned int path_len = strlen(POWER_SUPPLY_SUBSYSTEM) + 15;
   unsigned int entry_name_len = 0;
   unsigned int name_len = 0;
@@ -361,7 +365,8 @@ void find_batteries() {
   }
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   unsigned int duration;
 
   parse_args(argc, argv);
@@ -377,7 +382,7 @@ int main(int argc, char *argv[]) {
     err(EXIT_FAILURE, "Failed to daemonize");
   }
 
-  for (;;) {
+  for(;;) {
     update_battery();
     duration = multiplier;
 
@@ -385,11 +390,9 @@ int main(int argc, char *argv[]) {
       if (danger && battery_level <= danger && battery_state != STATE_DANGER) {
         battery_state = STATE_DANGER;
         if (dangercmd[0] != '\0')
-          if (system(dangercmd) == -1) { /* Ignore command errors... */
-          }
+          if (system(dangercmd) == -1) { /* Ignore command errors... */ }
 
-      } else if (critical && battery_level <= critical &&
-                 battery_state != STATE_CRITICAL) {
+      } else if (critical && battery_level <= critical && battery_state != STATE_CRITICAL) {
         battery_state = STATE_CRITICAL;
         notify(criticalmsg, NOTIFY_URGENCY_CRITICAL);
 
@@ -406,11 +409,11 @@ int main(int argc, char *argv[]) {
       }
 
     } else { /* charging */
-      battery_state = STATE_AC;
-      if (full && battery_level >= full && battery_state != STATE_FULL) {
-        battery_state = STATE_FULL;
-        notify(fullmsg, NOTIFY_URGENCY_NORMAL);
-      }
+        battery_state = STATE_AC;
+        if (full && battery_level >= full && battery_state != STATE_FULL) {
+            battery_state = STATE_FULL;
+            notify(fullmsg, NOTIFY_URGENCY_NORMAL);
+        }
     }
 
     sleep(duration);
