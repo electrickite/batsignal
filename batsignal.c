@@ -16,13 +16,15 @@
  */
 
 #define _GNU_SOURCE
+#include "version.h"
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
+#include <libnotify/notify.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <libnotify/notify.h>
-#include "version.h"
+#include <string.h>
+#include <unistd.h>
 
 #define PROGNAME "batsignal"
 
@@ -43,10 +45,13 @@ static unsigned char battery_required = 1;
 static unsigned char battery_name_specified = 0;
 
 /* battery information */
-static char *battery_name = "BAT0";
+static char **battery_names;
+static int amount_batteries = 1;
 static unsigned char battery_discharging = 0;
 static unsigned char battery_state = STATE_AC;
 static unsigned int battery_level = 100;
+static unsigned int energy_full = 0;
+static unsigned int energy_now = 0;
 static char *attr_path;
 
 /* check frequency multiplier (seconds) */
@@ -132,38 +137,83 @@ void notify(char *msg, NotifyUrgency urgency)
 void update_battery()
 {
   char state[12];
+  unsigned int tmp;
   FILE *file;
 
-  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/status", battery_name);
-  file = fopen(attr_path, "r");
-  if (file == NULL || fscanf(file, "%12s", state) == 0) {
-    if (battery_required)
-      err(EXIT_FAILURE, "Could not read %s", attr_path);
-    battery_discharging = 0;
-    goto cleanup;
-  }
-  fclose(file);
+  energy_now = 0;
+  energy_full = 0;
 
-  battery_discharging = strcmp(state, "Discharging") == 0;
+  /* iterate through all batteries */
+  for (int i = 0; i < amount_batteries; i++) {
+    char *battery_name = battery_names[i];
 
-  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/capacity", battery_name);
-  file = fopen(attr_path, "r");
-  if (file == NULL || fscanf(file, "%u", &battery_level) == 0) {
-    if (battery_required)
-      err(EXIT_FAILURE, "Could not read %s", attr_path);
-  }
-
-cleanup:
-  if (file) {
+    sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/status", battery_name);
+    file = fopen(attr_path, "r");
+    if (file == NULL || fscanf(file, "%12s", state) == 0) {
+      if (battery_required)
+        err(EXIT_FAILURE, "Could not read %s", attr_path);
+      battery_discharging = 0;
+    }
     fclose(file);
+
+    battery_discharging |= strcmp(state, "Discharging") == 0;
+
+    sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/energy_now", battery_name);
+    file = fopen(attr_path, "r");
+    if (file == NULL || fscanf(file, "%u", &tmp) == 0) {
+      if (battery_required)
+        err(EXIT_FAILURE, "Could not read %s", attr_path);
+    }
+    energy_now += tmp;
+
+    sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/energy_full", battery_name);
+    file = fopen(attr_path, "r");
+    if (file == NULL || fscanf(file, "%u", &tmp) == 0) {
+      if (battery_required)
+        err(EXIT_FAILURE, "Could not read %s", attr_path);
+    }
+    energy_full += tmp;
   }
+
+  battery_level = 100 * energy_now / energy_full;
+  printf("Battery level: %d\n", battery_level);
+}
+
+int split(char *in, char delim, char ***out)
+{
+  printf("%s\n", in);
+  int count = 1;
+
+  char *p = in;
+  while (*p != '\0') {
+    if (*p == delim)
+      count++;
+    p++;
+  }
+
+  *out = (char **)realloc(*out, sizeof(char **) * (count));
+  if (*out == NULL)
+    err(EXIT_FAILURE, "Memory allocation failed");
+
+  (*out)[0] = strtok(in, &delim);
+  for (int i = 1; i < count; i++) {
+    char *tok = strtok(NULL, &delim);
+    if (tok)
+      (*out)[i] = tok;
+    else {
+      count--;
+      i--;
+    }
+  }
+
+  return count;
 }
 
 void parse_args(int argc, char *argv[])
 {
   signed int c;
 
-  while ((c = getopt(argc, argv, ":hvbiew:c:d:f:W:C:D:F:n:m:a:I:")) != -1) {
+  while ((c = getopt(argc, argv, "-:hvbiew:c:d:f:W:C:D:F:n:m:a:I:")) != -1) {
     switch (c) {
       case 'h':
         print_help();
@@ -203,7 +253,7 @@ void parse_args(int argc, char *argv[])
         break;
       case 'n':
         battery_name_specified = 1;
-        battery_name = optarg;
+        amount_batteries = split(optarg, ',', &battery_names);
         break;
       case 'm':
         multiplier = atoi(optarg);
@@ -221,6 +271,8 @@ void parse_args(int argc, char *argv[])
         errx(EXIT_FAILURE, "Unknown option `-%c'.", optopt);
       case ':':
         errx(EXIT_FAILURE, "Option -%c requires an argument.", optopt);
+      case 1:
+        errx(EXIT_FAILURE, "Unknown argument %s.", optarg);
     }
   }
 }
@@ -266,48 +318,51 @@ unsigned char is_battery(char *name)
   return strcmp(type, "Battery") == 0;
 }
 
-void find_battery()
+void find_batteries()
 {
   unsigned int path_len = strlen(POWER_SUPPLY_SUBSYSTEM) + 15;
-  unsigned int name_len = strlen(battery_name);
   unsigned int entry_name_len = 0;
+  unsigned int name_len = 0;
   DIR *dir;
   struct dirent *entry;
 
-  attr_path = malloc(path_len + name_len);
-  if (attr_path == NULL)
-    err(EXIT_FAILURE, "Memory allocation failed");
-
-  if (is_battery(battery_name)) {
-    return;
-  } else if (battery_name_specified) {
-    goto nobat;
-  }
-
-  dir = opendir(POWER_SUPPLY_SUBSYSTEM);
-  if (dir) {
-    while ((entry = readdir(dir)) != NULL) {
-      entry_name_len = strlen(entry->d_name);
-      if (entry_name_len > name_len) {
-        name_len = entry_name_len;
+  if (battery_name_specified) {
+    for (int i = 0; i < amount_batteries; i++) {
+      if (strlen(battery_names[i]) > name_len) {
+        name_len = strlen(battery_names[i]);
         attr_path = realloc(attr_path, path_len + name_len);
-        if (attr_path == NULL)
-          err(EXIT_FAILURE, "Memory allocation failed");
       }
-      if (is_battery(entry->d_name)) {
-        battery_name = strdup(entry->d_name);
-        if (battery_name == NULL)
-          err(EXIT_FAILURE, "Memory allocation failed");
-        closedir(dir);
-        return;
+      if (is_battery(battery_names[i])) {
+        continue;
+      } else if (battery_name_specified && battery_required) {
+        err(EXIT_FAILURE, "Battery %s not found", battery_names[i]);
       }
     }
+  } else {
+    dir = opendir(POWER_SUPPLY_SUBSYSTEM);
+    if (dir) {
+      int i = 0;
+      while ((entry = readdir(dir)) != NULL) {
+        if (strlen(entry->d_name) > entry_name_len) {
+          entry_name_len = strlen(entry->d_name);
+          attr_path = realloc(attr_path, path_len + entry_name_len);
+        }
+        if (attr_path == NULL)
+          err(EXIT_FAILURE, "Memory allocation failed");
+
+        if (is_battery(entry->d_name)) {
+          battery_names = (char **)realloc(battery_names, sizeof(char *) * i);
+          battery_names[i] = strdup(entry->d_name);
+          if (battery_names[i] == NULL)
+            err(EXIT_FAILURE, "Memory allocation failed");
+          i++;
+        }
+      }
+      amount_batteries = i;
+    }
+
     closedir(dir);
   }
-
-nobat:
-  if (battery_required)
-    err(EXIT_FAILURE, "Battery %s not found", battery_name);
 }
 
 int main(int argc, char *argv[])
@@ -316,8 +371,12 @@ int main(int argc, char *argv[])
 
   parse_args(argc, argv);
   validate_options();
-  find_battery();
-  printf("Using battery: %s\n", battery_name);
+  find_batteries();
+
+  printf("Using batteries: %s", battery_names[0]);
+  for (int i = 1; i < amount_batteries; i++)
+    printf(" %s", battery_names[i]);
+  printf("\n");
 
   if (daemonize && daemon(1, 1) < 0) {
     err(EXIT_FAILURE, "Failed to daemonize");
