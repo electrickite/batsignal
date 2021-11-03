@@ -48,7 +48,7 @@ run COMMAND when battery is at danger level
 show MESSAGE when battery is at full level
 .TP
 .B \-n NAME
-battery device NAME (default BAT0)
+battery device NAME - multiple batteries separated by commas (default BAT0)
 .TP
 .B \-m SECONDS
 minimum number of SECONDS (default 60) to wait between battery checks

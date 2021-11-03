@@ -16,15 +16,16 @@
  */
 
 #define _GNU_SOURCE
-#include "version.h"
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
 #include <libnotify/notify.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "version.h"
 
 #define PROGNAME "batsignal"
 
@@ -109,7 +110,7 @@ Options:\n\
     -C MESSAGE     show MESSAGE when battery is at critical level\n\
     -D COMMAND     run COMMAND when battery is at danger level\n\
     -F MESSAGE     show MESSAGE when battery is full\n\
-    -n NAME        use battery NAME\n\
+    -n NAME        use battery NAME - multiple batteries separated by commas\n\
                    (default: BAT0)\n\
     -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
                    (default: 60)\n\
@@ -134,54 +135,93 @@ void notify(char *msg, NotifyUrgency urgency)
   }
 }
 
-void update_battery()
+void set_attributes(char **now_attribute, char **full_attribute)
+{
+  char *battery_name = battery_names[0];
+  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/charg_now", battery_name);
+  if (access(attr_path, F_OK) == 0) {
+    *now_attribute = "charge_now";
+    *full_attribute = "charge_full";
+  } else {
+    sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/energy_now", battery_name);
+    if (access(attr_path, F_OK) == 0) {
+      *now_attribute = "energy_now";
+      *full_attribute = "energy_full";
+    } else {
+      *now_attribute = "capacity";
+      *full_attribute = NULL;
+    }
+  }
+}
+
+void update_batteries()
 {
   char state[12];
-  unsigned int tmp;
+  char *battery_name;
+  char *now_attribute;
+  char *full_attribute;
+  unsigned int tmp_now;
+  unsigned int tmp_full;
   FILE *file;
 
+  battery_discharging = 0;
   energy_now = 0;
   energy_full = 0;
+  set_attributes(&now_attribute, &full_attribute);
 
   /* iterate through all batteries */
   for (int i = 0; i < amount_batteries; i++) {
-    char *battery_name = battery_names[i];
+    battery_name = battery_names[i];
 
     sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/status", battery_name);
     file = fopen(attr_path, "r");
     if (file == NULL || fscanf(file, "%12s", state) == 0) {
       if (battery_required)
         err(EXIT_FAILURE, "Could not read %s", attr_path);
-      battery_discharging = 0;
+      battery_discharging |= 0;
+      if (file)
+        fclose(file);
+      continue;
     }
     fclose(file);
 
     battery_discharging |= strcmp(state, "Discharging") == 0;
 
-    sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/energy_now", battery_name);
+    sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/%s", battery_name, now_attribute);
     file = fopen(attr_path, "r");
-    if (file == NULL || fscanf(file, "%u", &tmp) == 0) {
+    if (file == NULL || fscanf(file, "%u", &tmp_now) == 0) {
       if (battery_required)
         err(EXIT_FAILURE, "Could not read %s", attr_path);
+      if (file)
+        fclose(file);
+      continue;
     }
-    energy_now += tmp;
+    fclose(file);
 
-    sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/energy_full", battery_name);
-    file = fopen(attr_path, "r");
-    if (file == NULL || fscanf(file, "%u", &tmp) == 0) {
-      if (battery_required)
-        err(EXIT_FAILURE, "Could not read %s", attr_path);
+    if (full_attribute != NULL) {
+      sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/%s", battery_name, full_attribute);
+      file = fopen(attr_path, "r");
+      if (file == NULL || fscanf(file, "%u", &tmp_full) == 0) {
+        if (battery_required)
+          err(EXIT_FAILURE, "Could not read %s", attr_path);
+        if (file)
+          fclose(file);
+        continue;
+      }
+      fclose(file);
+    } else {
+      tmp_full = 100;
     }
-    energy_full += tmp;
+
+    energy_now += tmp_now;
+    energy_full += tmp_full;
   }
 
-  battery_level = 100 * energy_now / energy_full;
-  printf("Battery level: %d\n", battery_level);
+  battery_level = round(100.0 * energy_now / energy_full);
 }
 
 int split(char *in, char delim, char ***out)
 {
-  printf("%s\n", in);
   int count = 1;
 
   char *p = in;
@@ -375,7 +415,7 @@ int main(int argc, char *argv[])
 
   printf("Using batteries: %s", battery_names[0]);
   for (int i = 1; i < amount_batteries; i++)
-    printf(" %s", battery_names[i]);
+    printf(", %s", battery_names[i]);
   printf("\n");
 
   if (daemonize && daemon(1, 1) < 0) {
@@ -383,7 +423,7 @@ int main(int argc, char *argv[])
   }
 
   for(;;) {
-    update_battery();
+    update_batteries();
     duration = multiplier;
 
     if (battery_discharging) { /* discharging */

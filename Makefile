@@ -9,7 +9,7 @@ MANPREFIX = $(PREFIX)/share/man
 
 CFLAGS_EXTRA = -pedantic -Wall -Wextra -Werror -Wno-unused-parameter -Os -s
 CFLAGS := $(CFLAGS_EXTRA) $(CFLAGS) -std=c99 $(shell pkg-config --cflags libnotify)
-LDFLAGS := $(shell pkg-config --libs libnotify) $(LDFLAGS)
+LDFLAGS := $(shell pkg-config --libs libnotify) -lm $(LDFLAGS)
 
 all: $(NAME) $(NAME).1
 
