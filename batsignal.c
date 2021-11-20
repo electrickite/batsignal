@@ -138,7 +138,7 @@ void notify(char *msg, NotifyUrgency urgency)
 void set_attributes(char **now_attribute, char **full_attribute)
 {
   char *battery_name = battery_names[0];
-  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/charg_now", battery_name);
+  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/charge_now", battery_name);
   if (access(attr_path, F_OK) == 0) {
     *now_attribute = "charge_now";
     *full_attribute = "charge_full";
