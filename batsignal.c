@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <libnotify/notify.h>
 #include <math.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -405,9 +406,25 @@ void find_batteries()
   }
 }
 
+void cleanup()
+{
+  if (notify_is_initted()) {
+    notify_uninit();
+  }
+}
+
+void signal_handler()
+{
+  exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char *argv[])
 {
   unsigned int duration;
+
+  atexit(cleanup);
+  signal(SIGTERM, signal_handler);
+  signal(SIGINT, signal_handler);
 
   parse_args(argc, argv);
   validate_options();

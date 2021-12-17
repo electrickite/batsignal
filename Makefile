@@ -18,7 +18,7 @@ $(NAME).o: version.h
 $(NAME): $(NAME).o
 	$(CC) -o $(NAME) $(NAME).o $(LDFLAGS)
 
-$(NAME).1: $(NAME).1.in
+$(NAME).1: $(NAME).1.in version.h
 	sed "s/VERSION/$(VERSION)/g" < $< > $@
 
 install: all
