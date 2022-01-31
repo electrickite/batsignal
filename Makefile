@@ -1,7 +1,7 @@
 .POSIX:
 
 NAME = batsignal
-VERSION != grep VERSION version.h | cut -d \" -f2
+VERSION = 1.3.2
 
 CC = cc
 RM = rm -f
@@ -22,13 +22,16 @@ LDFLAGS := $(LIBS) $(LDFLAGS_EXTRA)
 
 all: $(NAME) $(NAME).1
 
-$(NAME).o: version.h
+$(NAME).o: config.h
+
+config.h:
+	echo '#define VERSION "$(VERSION)"' > $@
 
 $(NAME): $(NAME).o
 	$(CC) -o $(NAME) $(NAME).o $(LDFLAGS)
 
-$(NAME).1: $(NAME).1.in version.h
-	$(SED) "s/VERSION/$(VERSION)/g" < $(NAME).1.in > $@
+$(NAME).1: $(NAME).1.in config.h
+	$(SED) "s/@VERSION@/$(VERSION)/g" < $(NAME).1.in > $@
 
 install: all
 	@echo Installing in $(DESTDIR)$(PREFIX)

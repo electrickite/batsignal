@@ -1,3 +1,4 @@
+config.h
 batsignal
 batsignal.1
 *.o

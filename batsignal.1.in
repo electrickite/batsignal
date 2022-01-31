@@ -1,4 +1,4 @@
-.TH BATSIGNAL 1 batsignal\-VERSION
+.TH BATSIGNAL 1 batsignal\-@VERSION@
 .SH NAME
 batsignal \- battery monitor daemon
 .SH SYNOPSIS

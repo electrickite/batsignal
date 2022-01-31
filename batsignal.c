@@ -26,7 +26,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "version.h"
+
+#include "config.h"
 
 #define PROGNAME "batsignal"
 
