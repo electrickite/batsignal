@@ -11,11 +11,14 @@ SED = sed
 PREFIX = /usr/local
 MANPREFIX = $(PREFIX)/man
 
-CLIBS != pkg-config --cflags libnotify
-LDLIBS != pkg-config --libs libnotify
+INCLUDES != pkg-config --cflags libnotify
 CFLAGS_EXTRA = -pedantic -Wall -Wextra -Werror -Wno-unused-parameter -Os
-CFLAGS := $(CFLAGS_EXTRA) -std=c11 $(CLIBS)
-LDFLAGS := $(LDLIBS) -lm -s
+CFLAGS := $(CFLAGS_EXTRA) -std=c11 $(INCLUDES)
+
+LIBS != pkg-config --libs libnotify
+LIBS := $(LIBS) -lm
+LDFLAGS_EXTRA = -s
+LDFLAGS := $(LIBS) $(LDFLAGS_EXTRA)
 
 all: $(NAME) $(NAME).1
 
