@@ -1,15 +1,21 @@
 .POSIX:
 
 NAME = batsignal
+VERSION != grep VERSION version.h | cut -d \" -f2
 
-VERSION = $(shell grep VERSION version.h | cut -d \" -f2)
+CC = cc
+RM = rm -f
+INSTALL = install
+SED = sed
 
 PREFIX = /usr/local
-MANPREFIX = $(PREFIX)/share/man
+MANPREFIX = $(PREFIX)/man
 
-CFLAGS_EXTRA = -pedantic -Wall -Wextra -Werror -Wno-unused-parameter -Os -s
-CFLAGS := $(CFLAGS_EXTRA) $(CFLAGS) -std=c99 $(shell pkg-config --cflags libnotify)
-LDFLAGS := $(shell pkg-config --libs libnotify) -lm $(LDFLAGS)
+CLIBS != pkg-config --cflags libnotify
+LDLIBS != pkg-config --libs libnotify
+CFLAGS_EXTRA = -pedantic -Wall -Wextra -Werror -Wno-unused-parameter -Os
+CFLAGS := $(CFLAGS_EXTRA) -std=c11 $(CLIBS)
+LDFLAGS := $(LDLIBS) -lm -s
 
 all: $(NAME) $(NAME).1
 
@@ -19,12 +25,14 @@ $(NAME): $(NAME).o
 	$(CC) -o $(NAME) $(NAME).o $(LDFLAGS)
 
 $(NAME).1: $(NAME).1.in version.h
-	sed "s/VERSION/$(VERSION)/g" < $< > $@
+	$(SED) "s/VERSION/$(VERSION)/g" < $(NAME).1.in > $@
 
 install: all
 	@echo Installing in $(DESTDIR)$(PREFIX)
-	install -Dm755 -t $(DESTDIR)$(PREFIX)/bin $(NAME)
-	install -Dm644 -t $(DESTDIR)$(MANPREFIX)/man1 $(NAME).1
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/bin
+	$(INSTALL) -d $(DESTDIR)$(MANPREFIX)/man1/
+	$(INSTALL) -m 0755 $(NAME) $(DESTDIR)$(PREFIX)/bin/
+	$(INSTALL) -m 0644 $(NAME).1 $(DESTDIR)$(MANPREFIX)/man1/
 
 uninstall:
 	@echo Removing files from $(DESTDIR)$(PREFIX)
