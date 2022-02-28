@@ -9,7 +9,11 @@ INSTALL = install
 SED = sed
 
 PREFIX = /usr/local
-MANPREFIX = $(PREFIX)/man
+
+MANPREFIX.$(PREFIX)=$(PREFIX)/share/man
+MANPREFIX./usr/local=/usr/local/man
+MANPREFIX.=/usr/share/man
+MANPREFIX=$(MANPREFIX.$(PREFIX))
 
 INCLUDES != pkg-config --cflags libnotify
 CFLAGS_EXTRA = -pedantic -Wall -Wextra -Werror -Wno-unused-parameter -Os

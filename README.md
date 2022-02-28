@@ -28,7 +28,8 @@ Installation
 ------------
 Run the following command to build and install batsignal (as root if necessary):
 
-    $ make clean install
+    $ make
+    $ make install
 
 Usage
 -----
