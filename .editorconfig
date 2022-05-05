@@ -15,3 +15,6 @@ indent_style = tab
 
 [*.{c,h,cpp,hpp}]
 indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

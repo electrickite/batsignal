@@ -19,30 +19,55 @@ Requirements
 ------------
 Batsignal requires the following software to build:
 
-  * C compiler (GCC)
+  * C compiler
   * libnotify
   * make
   * pkg-config
 
 Installation
 ------------
-Run the following command to build and install batsignal (as root if necessary):
+Run the following command to build and install batsignal:
 
     $ make
-    $ make install
+    $ sudo make install
 
 Usage
 -----
 See `man batsignal` for details.
 
+Configuration
+-------------
+`batsignal` is configured using command options - see `man batsignal` for a
+complete list. these options can be passed manually from the terminal, added
+to the command invocation in shell profile scripts, or during window manager
+initialization.
+
+### Systemd
+A systemd user service can be installed by running:
+
+    $ make install-service
+
+And can be enabled and started with:
+
+    $ sudo systemctl daemon-reload
+    $ systemctl enable batsignal.service
+    $ systemctl start batsignal.service
+
+The service unit starts `batsignal` with default options. To customize the
+options used by the service, create a drop in file that overrides `ExecStart`.
+For example:
+
+    $ mkdir -p ~/.config/systemd/user/batsignal.service.d
+    $ printf '[Service]\nExecStart=\nExecStart=batsignal -c 10 -w 30 -f 97' > ~/.config/systemd/user/batsignal.service.d/options.conf
+
 Authors
 -------
-batsignal is written by Corey Hinshaw. It was orignally forked from juiced by
+batsignal is written by Corey Hinshaw. It was originally forked from juiced by
 Aaron Marcher.
 
 License and Copyright
 ---------------------
-Copyright (c) 2018-2022 Corey Hinshaw
+Copyright (c) 2018-2022 Corey Hinshaw  
 Copyright (c) 2016-2017 Aaron Marcher
 
 Permission to use, copy, modify, and/or distribute this software for any

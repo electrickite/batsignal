@@ -37,14 +37,19 @@ $(NAME).1: $(NAME).1.in version.h
 install: all
 	@echo Installing in $(DESTDIR)$(PREFIX)
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/bin
-	$(INSTALL) -d $(DESTDIR)$(MANPREFIX)/man1/
+	$(INSTALL) -d $(DESTDIR)$(MANPREFIX)/man1
 	$(INSTALL) -m 0755 $(NAME) $(DESTDIR)$(PREFIX)/bin/
 	$(INSTALL) -m 0644 $(NAME).1 $(DESTDIR)$(MANPREFIX)/man1/
+
+install-service: install
+	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/systemd/user
+	$(INSTALL) -m 0644 $(NAME).service $(DESTDIR)$(PREFIX)/lib/systemd/user/
 
 uninstall:
 	@echo Removing files from $(DESTDIR)$(PREFIX)
 	$(RM) $(DESTDIR)$(PREFIX)/bin/$(NAME)
 	$(RM) $(DESTDIR)$(MANPREFIX)/man1/$(NAME).1
+	$(RM) $(DESTDIR)$(PREFIX)/lib/systemd/user/$(NAME).service
 
 clean-all: clean clean-images
 

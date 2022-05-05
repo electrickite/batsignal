@@ -458,7 +458,9 @@ int main(int argc, char *argv[])
         }
 
       } else if (warning && battery_level <= warning) {
-        duration = (battery_level - critical) * multiplier;
+        if (!full)
+          duration = (battery_level - critical) * multiplier;
+
         if (battery_state != STATE_WARNING) {
           battery_state = STATE_WARNING;
           notify(warningmsg, NOTIFY_URGENCY_NORMAL);
@@ -466,17 +468,18 @@ int main(int argc, char *argv[])
 
       } else {
         battery_state = STATE_DISCHARGING;
-        duration = (battery_level - warning) * multiplier;
+        if (!full)
+          duration = (battery_level - warning) * multiplier;
       }
 
     } else { /* charging */
+      if (battery_state != STATE_FULL)
         battery_state = STATE_AC;
-        if (full && battery_level >= full) {
-          if (battery_state != STATE_FULL) {
-            battery_state = STATE_FULL;
-            notify(fullmsg, NOTIFY_URGENCY_NORMAL);
-          }
-        }
+
+      if (full && battery_level >= full && battery_state != STATE_FULL) {
+        battery_state = STATE_FULL;
+        notify(fullmsg, NOTIFY_URGENCY_NORMAL);
+      }
     }
 
     sleep(duration);

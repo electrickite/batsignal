@@ -58,10 +58,12 @@ app name used in notifications (default: batsignal)
 .TP
 .B \-I ICON
 display specified ICON in notifications
+.SH NOTES
+In most cases, batsignal will perform fewer battery state checks while the battery is discharging and the level of charge is not near a warning level. This frequency is affected by the multiplier (-m) option, but is never less than <multiplier> seconds. If the "full" level (-f) is set, batsignal will instead check the battery state every <multiplier> seconds regardless of level of charge.
 .SH AUTHORS
 Written by Corey Hinshaw. Based on juiced by Aaron Marcher.
 .SH COPYRIGHT
-Copyright 2018-2021 Corey Hinshaw
+Copyright 2018-2022 Corey Hinshaw
 .br
 Copyright 2016-2017 Aaron Marcher
 .br
