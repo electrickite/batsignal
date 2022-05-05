@@ -50,11 +50,11 @@ A systemd user service can be installed by running:
 And can be enabled and started with:
 
     $ sudo systemctl daemon-reload
-    $ systemctl enable batsignal.service
-    $ systemctl start batsignal.service
+    $ systemctl --user enable batsignal.service
+    $ systemctl --user start batsignal.service
 
 The service unit starts `batsignal` with default options. To customize the
-options used by the service, create a drop in file that overrides `ExecStart`.
+options used by the service, create a drop-in file that overrides `ExecStart`.
 For example:
 
     $ mkdir -p ~/.config/systemd/user/batsignal.service.d
