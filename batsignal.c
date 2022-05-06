@@ -41,6 +41,10 @@
 /* system paths */
 #define POWER_SUPPLY_SUBSYSTEM "/sys/class/power_supply"
 
+/* Battery state strings */
+#define POWER_SUPPLY_FULL "Full"
+#define POWER_SUPPLY_DISCHARGING "Discharging"
+
 /* program operation options */
 static unsigned char daemonize = 0;
 static unsigned char battery_required = 1;
@@ -50,6 +54,7 @@ static unsigned char battery_name_specified = 0;
 static char **battery_names;
 static int amount_batteries = 1;
 static unsigned char battery_discharging = 0;
+static unsigned char battery_full = 1;
 static unsigned char battery_state = STATE_AC;
 static unsigned int battery_level = 100;
 static unsigned int energy_full = 0;
@@ -157,7 +162,7 @@ void set_attributes(char **now_attribute, char **full_attribute)
 
 void update_batteries()
 {
-  char state[12];
+  char state[15];
   char *battery_name;
   char *now_attribute;
   char *full_attribute;
@@ -166,6 +171,7 @@ void update_batteries()
   FILE *file;
 
   battery_discharging = 0;
+  battery_full = 1;
   energy_now = 0;
   energy_full = 0;
   set_attributes(&now_attribute, &full_attribute);
@@ -186,7 +192,8 @@ void update_batteries()
     }
     fclose(file);
 
-    battery_discharging |= strcmp(state, "Discharging") == 0;
+    battery_discharging |= strcmp(state, POWER_SUPPLY_DISCHARGING) == 0;
+    battery_full &= strcmp(state, POWER_SUPPLY_FULL) == 0;
 
     sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/%s", battery_name, now_attribute);
     file = fopen(attr_path, "r");
@@ -476,9 +483,11 @@ int main(int argc, char *argv[])
       if (battery_state != STATE_FULL)
         battery_state = STATE_AC;
 
-      if (full && battery_level >= full && battery_state != STATE_FULL) {
-        battery_state = STATE_FULL;
-        notify(fullmsg, NOTIFY_URGENCY_NORMAL);
+      if (full && battery_state != STATE_FULL) {
+        if (battery_level >= full || battery_full) {
+          battery_state = STATE_FULL;
+          notify(fullmsg, NOTIFY_URGENCY_NORMAL);
+        }
       }
     }
 
