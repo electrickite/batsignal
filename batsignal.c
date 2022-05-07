@@ -46,29 +46,30 @@
 #define POWER_SUPPLY_DISCHARGING "Discharging"
 
 /* program operation options */
-static unsigned char daemonize = 0;
-static unsigned char battery_required = 1;
-static unsigned char battery_name_specified = 0;
+static char daemonize = 0;
+static char run_once = 0;
+static char battery_required = 1;
+static char battery_name_specified = 0;
 
 /* battery information */
 static char **battery_names;
 static int amount_batteries = 1;
-static unsigned char battery_discharging = 0;
-static unsigned char battery_full = 1;
-static unsigned char battery_state = STATE_AC;
-static unsigned int battery_level = 100;
-static unsigned int energy_full = 0;
-static unsigned int energy_now = 0;
+static char battery_discharging = 0;
+static char battery_full = 1;
+static char battery_state = STATE_AC;
+static int battery_level = 100;
+static int energy_full = 0;
+static int energy_now = 0;
 static char *attr_path;
 
 /* check frequency multiplier (seconds) */
-static unsigned int multiplier = 60;
+static int multiplier = 60;
 
 /* battery warning levels */
-static unsigned int warning = 15;
-static unsigned int critical = 5;
-static unsigned int danger = 2;
-static unsigned int full = 0;
+static int warning = 15;
+static int critical = 5;
+static int danger = 2;
+static int full = 0;
 
 /* messages for battery levels */
 static char *warningmsg = "Battery is low";
@@ -102,6 +103,7 @@ Options:\n\
     -h             print this help message\n\
     -v             print program version information\n\
     -b             run as background daemon\n\
+    -o             check battery once and exit\n\
     -i             ignore missing battery errors\n\
     -e             cause notifications to expire\n\
     -w LEVEL       battery warning LEVEL\n\
@@ -119,6 +121,7 @@ Options:\n\
     -n NAME        use battery NAME - multiple batteries separated by commas\n\
                    (default: BAT0)\n\
     -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
+                   0 SECONDS disables polling and waits for USR1 signal\n\
                    (default: 60)\n\
     -a NAME        app NAME used in desktop notifications\n\
                    (default: %s)\n\
@@ -261,7 +264,7 @@ void parse_args(int argc, char *argv[])
 {
   signed int c;
 
-  while ((c = getopt(argc, argv, "-:hvbiew:c:d:f:W:C:D:F:n:m:a:I:")) != -1) {
+  while ((c = getopt(argc, argv, "-:hvboiew:c:d:f:W:C:D:F:n:m:a:I:")) != -1) {
     switch (c) {
       case 'h':
         print_help();
@@ -272,20 +275,23 @@ void parse_args(int argc, char *argv[])
       case 'b':
         daemonize = 1;
         break;
+      case 'o':
+        run_once = 1;
+        break;
       case 'i':
         battery_required = 0;
         break;
       case 'w':
-        warning = atoi(optarg);
+        warning = strtoul(optarg, NULL, 10);
         break;
       case 'c':
-        critical = atoi(optarg);
+        critical = strtoul(optarg, NULL, 10);
         break;
       case 'd':
-        danger = atoi(optarg);
+        danger = strtoul(optarg, NULL, 10);
         break;
       case 'f':
-        full = atoi(optarg);
+        full = strtoul(optarg, NULL, 10);
         break;
       case 'W':
         warningmsg = optarg;
@@ -304,7 +310,7 @@ void parse_args(int argc, char *argv[])
         amount_batteries = split(optarg, ',', &battery_names);
         break;
       case 'm':
-        multiplier = atoi(optarg);
+        multiplier = strtoul(optarg, NULL, 10);
         break;
       case 'a':
         appname = optarg;
@@ -327,15 +333,15 @@ void parse_args(int argc, char *argv[])
 
 void validate_options()
 {
-  unsigned int lowlvl = danger;
+  int lowlvl = danger;
   char *rangemsg = "Option -%c must be between 0 and %i.";
 
   /* Sanity check numberic values */
-  if (warning > 100) errx(EXIT_FAILURE, rangemsg, 'w', 100);
-  if (critical > 100) errx(EXIT_FAILURE, rangemsg, 'c', 100);
-  if (danger > 100) errx(EXIT_FAILURE, rangemsg, 'd', 100);
-  if (full > 100) errx(EXIT_FAILURE, rangemsg, 'f', 100);
-  if (multiplier <= 0) errx(EXIT_FAILURE, "Option -m must be greater than 0");
+  if (warning > 100 || warning < 0) errx(EXIT_FAILURE, rangemsg, 'w', 100);
+  if (critical > 100 || critical < 0) errx(EXIT_FAILURE, rangemsg, 'c', 100);
+  if (danger > 100 || danger < 0) errx(EXIT_FAILURE, rangemsg, 'd', 100);
+  if (full > 100 || full < 0) errx(EXIT_FAILURE, rangemsg, 'f', 100);
+  if (multiplier < 0 || multiplier > 3600) errx(EXIT_FAILURE, rangemsg, 'm', 3600);
 
   /* Enssure levels are correctly ordered */
   if (warning && warning <= critical)
@@ -428,10 +434,15 @@ void signal_handler()
 int main(int argc, char *argv[])
 {
   unsigned int duration;
+  sigset_t sigs;
+  struct timespec timeout = { .tv_sec = 0 };
 
+  sigemptyset(&sigs);
+  sigaddset(&sigs, SIGUSR1);
   atexit(cleanup);
   signal(SIGTERM, signal_handler);
   signal(SIGINT, signal_handler);
+  sigprocmask(SIG_BLOCK, &sigs, NULL);
 
   parse_args(argc, argv);
   validate_options();
@@ -491,7 +502,14 @@ int main(int argc, char *argv[])
       }
     }
 
-    sleep(duration);
+    if (run_once) {
+      break;
+    } else if (multiplier == 0) {
+      sigwaitinfo(&sigs, NULL);
+    } else {
+      timeout.tv_sec = duration;
+      sigtimedwait(&sigs, NULL, &timeout);
+    }
   }
 
   return EXIT_SUCCESS;

@@ -9,61 +9,67 @@ batsignal is a lightweight battery daemon written in C that notifies the user ab
 .SH OPTIONS
 .TP
 .B \-h
-display help
+Display help
 .TP
 .B \-v
-display version information
+Display version information
 .TP
 .B \-b
-run batsignal as background daemon
+Run batsignal as background daemon
+.TP
+.B \-o
+Check battery once and exit
 .TP
 .B \-i
-ignore missing battery errors
+Ignore missing battery errors
 .TP
 .B \-e
-cause notifications to expire
+Cause notifications to expire
 .TP
 .B \-w LEVEL
-battery warning LEVEL (default 15). 0 disables this level
+Battery warning LEVEL (default 15). 0 disables this level
 .TP
 .B \-c LEVEL
-critical battery LEVEL (default 5). 0 disables this level
+Critical battery LEVEL (default 5). 0 disables this level
 .TP
 .B \-d LEVEL
-battery danger LEVEL (default 2). 0 disables this level
+Battery danger LEVEL (default 2). 0 disables this level
 .TP
 .B \-f LEVEL
-battery full LEVEL (default 0). 0 disables this level
+Battery full LEVEL (default 0). 0 disables this level
 .TP
 .B \-W MESSAGE
-show MESSAGE when battery is at warning level
+Show MESSAGE when battery is at warning level
 .TP
 .B \-C MESSAGE
-show MESSAGE when battery is at critical level
+Show MESSAGE when battery is at critical level
 .TP
 .B \-D COMMAND
-run COMMAND when battery is at danger level
+Run COMMAND when battery is at danger level
 .TP
 .B \-F MESSAGE
-show MESSAGE when battery is at full level
+Show MESSAGE when battery is at full level
 .TP
 .B \-n NAME
-battery device NAME - multiple batteries separated by commas (default BAT0)
+Battery device NAME - multiple batteries may be separated by commas (default BAT0)
 .TP
 .B \-m SECONDS
-minimum number of SECONDS (default 60) to wait between battery checks
+Minimum number of SECONDS (default 60) to wait between battery checks. Settings SECONDS to 0 disables polling and waits for the USR1 signal before checking battery level.
 .TP
 .B \-a APP_NAME
-app name used in notifications (default: batsignal)
+App name used in notifications (default: batsignal)
 .TP
 .B \-I ICON
-display specified ICON in notifications
+Display specified ICON in notifications
+.SH SIGNALS
+batsignal responds to the following signals:
+.TP
+.B SIGUSR1
+Sending the process SIGUSR1 will cause an immediate battery check to be performed.
 .SH NOTES
-In most cases, batsignal will perform fewer battery state checks while the battery is discharging and the level of charge is not near a warning level. This frequency is affected by the multiplier (-m) option, but is never less than <multiplier> seconds. If the "full" level (-f) is set, batsignal will instead check the battery state every <multiplier> seconds regardless of level of charge.
+In most cases, batsignal will perform fewer battery state checks while the battery is discharging and the level of charge is not near a warning level. This frequency is affected by the multiplier (-m) option and is never less than <multiplier> seconds. If the "full" level (-f) is set, batsignal will instead check the battery state every <multiplier> seconds regardless of level of charge.
 
 If the "full" level (-f) is set, the battery full notification will be triggered at the given level of charge or when the battery status changes to full, whichever occurs first.
-.SH AUTHORS
-Written by Corey Hinshaw. Based on juiced by Aaron Marcher.
 .SH COPYRIGHT
 Copyright 2018-2022 Corey Hinshaw
 .br
