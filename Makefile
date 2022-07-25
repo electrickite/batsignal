@@ -1,12 +1,19 @@
 .POSIX:
 
 NAME = batsignal
-VERSION != grep VERSION version.h | cut -d \" -f2
 
-CC = cc
+CC.$(CC)=$(CC)
+CC.=cc
+CC.c99=cc
+CC:=$(CC.$(CC))
+
 RM = rm -f
 INSTALL = install
 SED = sed
+GREP = grep
+CUT = cut
+
+VERSION != $(GREP) VERSION version.h | $(CUT) -d \" -f2
 
 PREFIX = /usr/local
 
@@ -17,19 +24,19 @@ MANPREFIX=$(MANPREFIX.$(PREFIX))
 
 INCLUDES != pkg-config --cflags libnotify
 CFLAGS_EXTRA = -pedantic -Wall -Wextra -Werror -Wno-unused-parameter -Os
-CFLAGS := $(CFLAGS_EXTRA) -std=c11 $(INCLUDES)
+CFLAGS := $(CFLAGS_EXTRA) -std=c11 $(INCLUDES) $(CFLAGS)
 
 LIBS != pkg-config --libs libnotify
 LIBS := $(LIBS) -lm
 LDFLAGS_EXTRA = -s
-LDFLAGS := $(LIBS) $(LDFLAGS_EXTRA)
+LDFLAGS := $(LDFLAGS_EXTRA) $(LDFLAGS)
 
 all: $(NAME) $(NAME).1
 
 $(NAME).o: version.h
 
 $(NAME): $(NAME).o
-	$(CC) -o $(NAME) $(NAME).o $(LDFLAGS)
+	$(CC) -o $(NAME) $(LDFLAGS) $(NAME).o $(LIBS)
 
 $(NAME).1: $(NAME).1.in version.h
 	$(SED) "s/VERSION/$(VERSION)/g" < $(NAME).1.in > $@
