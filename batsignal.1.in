@@ -5,7 +5,8 @@ batsignal \- battery monitor daemon
 .B batsignal
 .RB [ OPTIONS ]
 .SH DESCRIPTION
-batsignal is a lightweight battery daemon written in C that notifies the user about battery states. It is intended for minimal window managers, but can be used in any environment that supports desktop notifications via libnotify.
+batsignal is a lightweight battery daemon written in C that notifies the user about battery states.
+It is intended for minimal window managers, but can be used in any environment that supports desktop notifications via libnotify.
 .SH OPTIONS
 .TP
 .B \-h
@@ -25,6 +26,9 @@ Ignore missing battery errors
 .TP
 .B \-e
 Cause notifications to expire
+.TP
+.B \-N
+Disable desktop notifications
 .TP
 .B \-w LEVEL
 Battery warning LEVEL (default 15). 0 disables this level
@@ -50,6 +54,9 @@ Run COMMAND when battery is at danger level
 .B \-F MESSAGE
 Show MESSAGE when battery is at full level
 .TP
+.B \-M COMMAND
+Send each message using COMMAND
+.TP
 .B \-n NAME
 Battery device NAME - multiple batteries may be separated by commas (default BAT0)
 .TP
@@ -67,9 +74,17 @@ batsignal responds to the following signals:
 .B SIGUSR1
 Sending the process SIGUSR1 will cause an immediate battery check to be performed.
 .SH NOTES
-In most cases, batsignal will perform fewer battery state checks while the battery is discharging and the level of charge is not near a warning level. This frequency is affected by the multiplier (-m) option and is never less than <multiplier> seconds. If the "full" level (-f) is set, batsignal will instead check the battery state every <multiplier> seconds regardless of level of charge.
+In most cases, batsignal will perform fewer battery state checks while the battery is discharging and the level of charge is not near a warning level.
+This frequency is affected by the multiplier (-m) option and is never less than <multiplier> seconds.
+If the "full" level (-f) is set, batsignal will instead check the battery state every <multiplier> seconds regardless of level of charge.
 
 If the "full" level (-f) is set, the battery full notification will be triggered at the given level of charge or when the battery status changes to full, whichever occurs first.
+
+The message COMMAND passed with -M is a printf-style format string.
+It can use two string placeholders (%s) that will be replaced by the message text and the current battery level.
+Be sure to test the command - invalid format strings may cause batsignal to crash.
+.br
+Ex: -M "wall 'Battery warning: %s - Level is %s'"
 .SH COPYRIGHT
 Copyright 2018-2022 Corey Hinshaw
 .br

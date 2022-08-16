@@ -49,6 +49,7 @@
 static char daemonize = 0;
 static char run_once = 0;
 static char battery_required = 1;
+static char show_notifications = 1;
 static char battery_name_specified = 0;
 
 /* battery information */
@@ -79,6 +80,10 @@ static char *fullmsg = "Battery is full";
 /* run this system command if battery reaches danger level */
 static char *dangercmd = "";
 
+/* run this system command to display a message */
+static char *msgcmd = "";
+static char *msgcmdbuf;
+
 /* app name for notification */
 static char *appname = PROGNAME;
 
@@ -106,6 +111,7 @@ Options:\n\
     -o             check battery once and exit\n\
     -i             ignore missing battery errors\n\
     -e             cause notifications to expire\n\
+    -N             disable desktop notifications\n\
     -w LEVEL       battery warning LEVEL\n\
                    (default: 15)\n\
     -c LEVEL       critical battery LEVEL\n\
@@ -118,6 +124,7 @@ Options:\n\
     -C MESSAGE     show MESSAGE when battery is at critical level\n\
     -D COMMAND     run COMMAND when battery is at danger level\n\
     -F MESSAGE     show MESSAGE when battery is full\n\
+    -M COMMAND     send each message using COMMAND\n\
     -n NAME        use battery NAME - multiple batteries separated by commas\n\
                    (default: BAT0)\n\
     -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
@@ -132,9 +139,22 @@ Options:\n\
 void notify(char *msg, NotifyUrgency urgency)
 {
   char body[20];
-  sprintf(body, "Battery level: %u%%", battery_level);
+  char level[8];
+  size_t needed;
 
-  if (msg[0] != '\0' && notify_init(appname)) {
+  if (msgcmd[0] != '\0') {
+    snprintf(level, 8, "%d", battery_level);
+    needed = snprintf(NULL, 0, msgcmd, msg, level);
+    msgcmdbuf = realloc(msgcmdbuf, needed + 1);
+    if (msgcmdbuf == NULL)
+      err(EXIT_FAILURE, "Memory allocation failed");
+    sprintf(msgcmdbuf, msgcmd, msg, level);
+    if (system(msgcmdbuf) == -1) { /* Ignore command errors... */ }
+  }
+
+  if (show_notifications && msg[0] != '\0' && notify_init(appname)) {
+    sprintf(body, "Battery level: %u%%", battery_level);
+
     NotifyNotification *notification = notify_notification_new(msg, body, icon);
     notify_notification_set_urgency(notification, urgency);
     notify_notification_set_timeout(notification, notification_expires);
@@ -264,7 +284,7 @@ void parse_args(int argc, char *argv[])
 {
   signed int c;
 
-  while ((c = getopt(argc, argv, "-:hvboiew:c:d:f:W:C:D:F:n:m:a:I:")) != -1) {
+  while ((c = getopt(argc, argv, "-:hvboiew:c:d:f:W:C:D:F:M:Nn:m:a:I:")) != -1) {
     switch (c) {
       case 'h':
         print_help();
@@ -304,6 +324,12 @@ void parse_args(int argc, char *argv[])
         break;
       case 'F':
         fullmsg = optarg;
+        break;
+      case 'M':
+        msgcmd = optarg;
+        break;
+      case 'N':
+        show_notifications = 0;
         break;
       case 'n':
         battery_name_specified = 1;
