@@ -387,7 +387,7 @@ void validate_options()
 unsigned char is_battery(char *name)
 {
   FILE *file;
-  char type[10] = "";
+  char type[11] = "";
 
   sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/type", name);
   file = fopen(attr_path, "r");
