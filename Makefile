@@ -24,7 +24,7 @@ MANPREFIX=$(MANPREFIX.$(PREFIX))
 
 INCLUDES != pkg-config --cflags libnotify
 CFLAGS_EXTRA = -pedantic -Wall -Wextra -Werror -Wno-unused-parameter -Os
-CFLAGS := $(CFLAGS_EXTRA) -std=c11 $(INCLUDES) $(CFLAGS)
+CFLAGS := $(CFLAGS_EXTRA) $(INCLUDES) $(CFLAGS)
 
 LIBS != pkg-config --libs libnotify
 LIBS := $(LIBS) -lm
