@@ -384,7 +384,7 @@ void validate_options()
     errx(EXIT_FAILURE, "Option -f must be greater than %i.", lowlvl);
 }
 
-unsigned char is_battery(char *name)
+unsigned char is_type_battery(char *name)
 {
   FILE *file;
   char type[11] = "";
@@ -395,7 +395,28 @@ unsigned char is_battery(char *name)
     if (fscanf(file, "%10s", type) == 0) { /* Continue... */ }
     fclose(file);
   }
+
   return strcmp(type, "Battery") == 0;
+}
+
+unsigned char has_capacity_field(char *name)
+{
+  FILE *file;
+  int capacity = -1;
+
+  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/capacity", name);
+  file = fopen(attr_path, "r");
+  if (file != NULL) {
+    if (fscanf(file, "%d", &capacity) == 0) { /* Continue... */ }
+    fclose(file);
+  }
+
+  return capacity >= 0;
+}
+
+unsigned char is_battery(char *name)
+{
+  return is_type_battery(name) != 0 && has_capacity_field(name) != 0;
 }
 
 void find_batteries()
