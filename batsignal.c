@@ -164,9 +164,8 @@ void notify(char *msg, NotifyUrgency urgency)
   }
 }
 
-void set_attributes(char **now_attribute, char **full_attribute)
+void set_attributes(char *battery_name, char **now_attribute, char **full_attribute)
 {
-  char *battery_name = battery_names[0];
   sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/charge_now", battery_name);
   if (access(attr_path, F_OK) == 0) {
     *now_attribute = "charge_now";
@@ -197,7 +196,7 @@ void update_batteries()
   battery_full = 1;
   energy_now = 0;
   energy_full = 0;
-  set_attributes(&now_attribute, &full_attribute);
+  set_attributes(battery_names[0], &now_attribute, &full_attribute);
 
   /* iterate through all batteries */
   for (int i = 0; i < amount_batteries; i++) {
@@ -402,12 +401,20 @@ unsigned char has_capacity_field(char *name)
 {
   FILE *file;
   int capacity = -1;
+  char *now_attribute;
+  char *full_attribute;
 
-  sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/capacity", name);
-  file = fopen(attr_path, "r");
-  if (file != NULL) {
-    if (fscanf(file, "%d", &capacity) == 0) { /* Continue... */ }
-    fclose(file);
+  set_attributes(name, &now_attribute, &full_attribute);
+
+  if (strcmp(now_attribute, "capacity") == 0) {
+    sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/capacity", name);
+    file = fopen(attr_path, "r");
+    if (file != NULL) {
+      if (fscanf(file, "%d", &capacity) == 0) { /* Continue... */ }
+      fclose(file);
+    }
+  } else {
+    capacity = 1;
   }
   return capacity >= 0;
 }
