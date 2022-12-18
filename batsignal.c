@@ -395,7 +395,6 @@ unsigned char is_type_battery(char *name)
     if (fscanf(file, "%10s", type) == 0) { /* Continue... */ }
     fclose(file);
   }
-
   return strcmp(type, "Battery") == 0;
 }
 
@@ -410,13 +409,12 @@ unsigned char has_capacity_field(char *name)
     if (fscanf(file, "%d", &capacity) == 0) { /* Continue... */ }
     fclose(file);
   }
-
   return capacity >= 0;
 }
 
 unsigned char is_battery(char *name)
 {
-  return is_type_battery(name) != 0 && has_capacity_field(name) != 0;
+  return is_type_battery(name) && has_capacity_field(name);
 }
 
 void find_batteries()
