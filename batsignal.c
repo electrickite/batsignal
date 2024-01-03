@@ -16,6 +16,7 @@
  */
 
 #define _DEFAULT_SOURCE
+#include <libnotify/notification.h>
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
@@ -136,7 +137,7 @@ Options:\n\
 ", PROGNAME, PROGNAME);
 }
 
-void notify(char *msg, NotifyUrgency urgency)
+void update_notification(char *msg, NotifyUrgency urgency, NotifyNotification *notification)
 {
   char body[20];
   char level[8];
@@ -155,12 +156,10 @@ void notify(char *msg, NotifyUrgency urgency)
   if (show_notifications && msg[0] != '\0' && notify_init(appname)) {
     sprintf(body, "Battery level: %u%%", battery_level);
 
-    NotifyNotification *notification = notify_notification_new(msg, body, icon);
+    notify_notification_update(notification, msg, body, icon);
     notify_notification_set_urgency(notification, urgency);
     notify_notification_set_timeout(notification, notification_expires);
     notify_notification_show(notification, NULL);
-    g_object_unref(notification);
-    notify_uninit();
   }
 }
 
@@ -489,6 +488,9 @@ int main(int argc, char *argv[])
   sigset_t sigs;
   struct timespec timeout = { .tv_sec = 0 };
 
+  char body[20] = "empty";
+  NotifyNotification *notification = notify_notification_new(warningmsg, body, icon);
+
   sigemptyset(&sigs);
   sigaddset(&sigs, SIGUSR1);
   atexit(cleanup);
@@ -524,7 +526,7 @@ int main(int argc, char *argv[])
       } else if (critical && battery_level <= critical) {
         if (battery_state != STATE_CRITICAL) {
           battery_state = STATE_CRITICAL;
-          notify(criticalmsg, NOTIFY_URGENCY_CRITICAL);
+          update_notification(criticalmsg, NOTIFY_URGENCY_CRITICAL, notification);
         }
 
       } else if (warning && battery_level <= warning) {
@@ -533,23 +535,28 @@ int main(int argc, char *argv[])
 
         if (battery_state != STATE_WARNING) {
           battery_state = STATE_WARNING;
-          notify(warningmsg, NOTIFY_URGENCY_NORMAL);
+          update_notification(warningmsg, NOTIFY_URGENCY_NORMAL, notification);
         }
 
       } else {
+        if (battery_state == STATE_FULL) {
+          notify_notification_close(notification, NULL );
+        }
         battery_state = STATE_DISCHARGING;
         if (!full)
           duration = (battery_level - warning) * multiplier;
       }
 
     } else { /* charging */
-      if (battery_state != STATE_FULL)
+      if (battery_state != STATE_FULL) {
         battery_state = STATE_AC;
+        notify_notification_close(notification, NULL );
+      }
 
       if (full && battery_state != STATE_FULL) {
         if (battery_level >= full || battery_full) {
           battery_state = STATE_FULL;
-          notify(fullmsg, NOTIFY_URGENCY_NORMAL);
+          update_notification(fullmsg, NOTIFY_URGENCY_NORMAL, notification);
         }
       }
     }
