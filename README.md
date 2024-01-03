@@ -67,7 +67,7 @@ Aaron Marcher.
 
 License and Copyright
 ---------------------
-Copyright (c) 2018-2022 Corey Hinshaw  
+Copyright (c) 2018-2024 Corey Hinshaw  
 Copyright (c) 2016-2017 Aaron Marcher
 
 Permission to use, copy, modify, and/or distribute this software for any

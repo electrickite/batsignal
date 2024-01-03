@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 Corey Hinshaw
+ * Copyright (c) 2018-2024 Corey Hinshaw
  * Copyright (c) 2016-2017 Aaron Marcher
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -16,10 +16,10 @@
  */
 
 #define _DEFAULT_SOURCE
-#include <libnotify/notification.h>
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
+#include <libnotify/notification.h>
 #include <libnotify/notify.h>
 #include <math.h>
 #include <signal.h>
@@ -66,6 +66,7 @@ static char *attr_path;
 
 /* check frequency multiplier (seconds) */
 static int multiplier = 60;
+static char fixed = 0;
 
 /* battery warning levels */
 static int warning = 15;
@@ -130,6 +131,7 @@ Options:\n\
                    (default: BAT0)\n\
     -m SECONDS     minimum number of SECONDS to wait between battery checks\n\
                    0 SECONDS disables polling and waits for USR1 signal\n\
+                   Prefixing with a + will always check at SECONDS interval\n\
                    (default: 60)\n\
     -a NAME        app NAME used in desktop notifications\n\
                    (default: %s)\n\
@@ -153,7 +155,7 @@ void update_notification(char *msg, NotifyUrgency urgency, NotifyNotification *n
     if (system(msgcmdbuf) == -1) { /* Ignore command errors... */ }
   }
 
-  if (show_notifications && msg[0] != '\0' && notify_init(appname)) {
+  if (show_notifications && msg[0] != '\0') {
     sprintf(body, "Battery level: %u%%", battery_level);
 
     notify_notification_update(notification, msg, body, icon);
@@ -334,7 +336,12 @@ void parse_args(int argc, char *argv[])
         amount_batteries = split(optarg, ',', &battery_names);
         break;
       case 'm':
-        multiplier = strtoul(optarg, NULL, 10);
+        if (optarg[0] == '+') {
+          fixed = 1;
+          multiplier = strtoul(optarg + 1, NULL, 10);
+        } else {
+          multiplier = strtoul(optarg, NULL, 10);
+        }
         break;
       case 'a':
         appname = optarg;
@@ -488,15 +495,16 @@ int main(int argc, char *argv[])
   sigset_t sigs;
   struct timespec timeout = { .tv_sec = 0 };
 
-  char body[20] = "empty";
-  NotifyNotification *notification = notify_notification_new(warningmsg, body, icon);
-
   sigemptyset(&sigs);
   sigaddset(&sigs, SIGUSR1);
   atexit(cleanup);
   signal(SIGTERM, signal_handler);
   signal(SIGINT, signal_handler);
   sigprocmask(SIG_BLOCK, &sigs, NULL);
+
+  if (!notify_init(appname))
+    err(EXIT_FAILURE, "Failed to initialize notifications");
+  NotifyNotification *notification = notify_notification_new(warningmsg, NULL, icon);
 
   parse_args(argc, argv);
   validate_options();
@@ -530,7 +538,7 @@ int main(int argc, char *argv[])
         }
 
       } else if (warning && battery_level <= warning) {
-        if (!full)
+        if (!full && !fixed)
           duration = (battery_level - critical) * multiplier;
 
         if (battery_state != STATE_WARNING) {
@@ -543,7 +551,7 @@ int main(int argc, char *argv[])
           notify_notification_close(notification, NULL );
         }
         battery_state = STATE_DISCHARGING;
-        if (!full)
+        if (!full && !fixed)
           duration = (battery_level - warning) * multiplier;
       }
 
