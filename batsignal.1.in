@@ -42,6 +42,9 @@ Battery danger LEVEL (default 2). 0 disables this level
 .B \-f LEVEL
 Battery full LEVEL (default 0). 0 disables this level
 .TP
+.B \-p
+Show a message when the battery begins charging or discharging
+.TP
 .B \-W MESSAGE
 Show MESSAGE when battery is at warning level
 .TP
@@ -53,6 +56,12 @@ Run COMMAND when battery is at danger level
 .TP
 .B \-F MESSAGE
 Show MESSAGE when battery is at full level
+.TP
+.B \-P MESSAGE
+Show MESSAGE when battery is charging, if -p option is set
+.TP
+.B \-U MESSAGE
+Show MESSAGE when battery is discharging, if -p option is set
 .TP
 .B \-M COMMAND
 Send each message using COMMAND
@@ -76,11 +85,11 @@ Sending the process SIGUSR1 will cause an immediate battery check to be performe
 .SH NOTES
 In most cases, batsignal will perform fewer battery state checks while the battery is discharging and the level of charge is not near a warning level.
 This frequency is affected by the multiplier (-m) option and is never less than <multiplier> seconds.
-If the "full" level (-f) is set, batsignal will instead check the battery state every <multiplier> seconds regardless of level of charge.
+If the "full" level (-f) is set or charge/discharge messages are enabled (-p), batsignal will instead check the battery state every <multiplier> seconds regardless of level of charge.
 
 If the "full" level (-f) is set, the battery full notification will be triggered at the given level of charge or when the battery status changes to full, whichever occurs first.
 
-The message COMMAND passed with -M is a printf-style format string.
+The message COMMAND passed with -M is a C printf-style format string.
 It can use two string placeholders (%s) that will be replaced by the message text and the current battery level.
 Be sure to test the command - invalid format strings may cause batsignal to crash.
 .br

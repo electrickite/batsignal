@@ -51,6 +51,7 @@ static char daemonize = 0;
 static char run_once = 0;
 static char battery_required = 1;
 static char show_notifications = 1;
+static char show_charging_msg = 0;
 static char battery_name_specified = 0;
 
 /* battery information */
@@ -78,6 +79,8 @@ static int full = 0;
 static char *warningmsg = "Battery is low";
 static char *criticalmsg = "Battery is critically low";
 static char *fullmsg = "Battery is full";
+static char *chargingmsg = "Battery is charging";
+static char *dischargingmsg = "Battery is discharging";
 
 /* run this system command if battery reaches danger level */
 static char *dangercmd = "";
@@ -122,10 +125,13 @@ Options:\n\
                    (default: 2)\n\
     -f LEVEL       full battery LEVEL\n\
                    (default: disabled)\n\
+    -p             show message when battery begins charging/discharging\n\
     -W MESSAGE     show MESSAGE when battery is at warning level\n\
     -C MESSAGE     show MESSAGE when battery is at critical level\n\
     -D COMMAND     run COMMAND when battery is at danger level\n\
     -F MESSAGE     show MESSAGE when battery is full\n\
+    -P MESSAGE     battery charging MESSAGE\n\
+    -U MESSAGE     battery discharging MESSAGE\n\
     -M COMMAND     send each message using COMMAND\n\
     -n NAME        use battery NAME - multiple batteries separated by commas\n\
                    (default: BAT0)\n\
@@ -284,7 +290,7 @@ void parse_args(int argc, char *argv[])
 {
   signed int c;
 
-  while ((c = getopt(argc, argv, "-:hvboiew:c:d:f:W:C:D:F:M:Nn:m:a:I:")) != -1) {
+  while ((c = getopt(argc, argv, "-:hvboiew:c:d:f:pW:C:D:F:P:U:M:Nn:m:a:I:")) != -1) {
     switch (c) {
       case 'h':
         print_help();
@@ -312,6 +318,11 @@ void parse_args(int argc, char *argv[])
         break;
       case 'f':
         full = strtoul(optarg, NULL, 10);
+        fixed = 1;
+        break;
+      case 'p':
+        show_charging_msg = 1;
+        fixed = 1;
         break;
       case 'W':
         warningmsg = optarg;
@@ -324,6 +335,12 @@ void parse_args(int argc, char *argv[])
         break;
       case 'F':
         fullmsg = optarg;
+        break;
+      case 'P':
+        chargingmsg = optarg;
+        break;
+      case 'U':
+        dischargingmsg = optarg;
         break;
       case 'M':
         msgcmd = optarg;
@@ -492,6 +509,7 @@ void signal_handler()
 int main(int argc, char *argv[])
 {
   unsigned int duration;
+  char previous_discharging_status;
   sigset_t sigs;
   struct timespec timeout = { .tv_sec = 0 };
 
@@ -519,7 +537,10 @@ int main(int argc, char *argv[])
     err(EXIT_FAILURE, "Failed to daemonize");
   }
 
+  update_batteries();
+
   for(;;) {
+    previous_discharging_status = battery_discharging;
     update_batteries();
     duration = multiplier;
 
@@ -538,7 +559,7 @@ int main(int argc, char *argv[])
         }
 
       } else if (warning && battery_level <= warning) {
-        if (!full && !fixed)
+        if (!fixed)
           duration = (battery_level - critical) * multiplier;
 
         if (battery_state != STATE_WARNING) {
@@ -547,25 +568,28 @@ int main(int argc, char *argv[])
         }
 
       } else {
-        if (battery_state == STATE_FULL) {
-          notify_notification_close(notification, NULL );
+        if (show_charging_msg && battery_discharging != previous_discharging_status) {
+          update_notification(dischargingmsg, NOTIFY_URGENCY_NORMAL, notification);
+        } else if (battery_state == STATE_FULL) {
+          notify_notification_close(notification, NULL);
         }
         battery_state = STATE_DISCHARGING;
-        if (!full && !fixed)
+        if (!fixed)
           duration = (battery_level - warning) * multiplier;
       }
 
     } else { /* charging */
-      if (battery_state != STATE_FULL) {
-        battery_state = STATE_AC;
-        notify_notification_close(notification, NULL );
-      }
+      if ((full && battery_state != STATE_FULL) && (battery_level >= full || battery_full)) {
+        battery_state = STATE_FULL;
+        update_notification(fullmsg, NOTIFY_URGENCY_NORMAL, notification);
 
-      if (full && battery_state != STATE_FULL) {
-        if (battery_level >= full || battery_full) {
-          battery_state = STATE_FULL;
-          update_notification(fullmsg, NOTIFY_URGENCY_NORMAL, notification);
-        }
+      } else if (show_charging_msg && battery_discharging != previous_discharging_status) {
+        battery_state = STATE_AC;
+        update_notification(chargingmsg, NOTIFY_URGENCY_NORMAL, notification);
+
+      } else {
+        battery_state = STATE_AC;
+        notify_notification_close(notification, NULL);
       }
     }
 
