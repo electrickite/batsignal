@@ -61,7 +61,7 @@ Send each message using COMMAND
 Battery device NAME - multiple batteries may be separated by commas (default BAT0)
 .TP
 .B \-m SECONDS
-Minimum number of SECONDS (default 60) to wait between battery checks. Settings SECONDS to 0 disables polling and waits for the USR1 signal before checking battery level. Prefixing SECONDS with a + (ex: -m +10) will force a check at SECONDS intervals, regardless of bettery level.
+Minimum number of SECONDS (default 60) to wait between battery checks. Settings SECONDS to 0 disables polling and waits for the USR1 signal before checking battery level. Prefixing SECONDS with a + (ex: -m +10) will force a check at SECONDS intervals, regardless of battery level.
 .TP
 .B \-a APP_NAME
 App name used in notifications (default: batsignal)
