@@ -23,13 +23,13 @@
 #include <libnotify/notify.h>
 #include <math.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "version.h"
-
-#define PROGNAME "batsignal"
+#include "options.h"
+#include "defs.h"
 
 /* battery states */
 #define STATE_AC 0
@@ -47,18 +47,18 @@
 #define POWER_SUPPLY_DISCHARGING "Discharging"
 
 /* program operation options */
-static char daemonize = 0;
-static char run_once = 0;
-static char battery_required = 1;
-static char show_notifications = 1;
-static char show_charging_msg = 0;
-static char battery_name_specified = 0;
+static bool daemonize = false;
+static bool run_once = false;
+static bool battery_required = true;
+static bool show_notifications = true;
+static bool show_charging_msg = false;
+static bool battery_name_specified = false;
 
 /* battery information */
 static char **battery_names;
 static int amount_batteries = 1;
-static char battery_discharging = 0;
-static char battery_full = 1;
+static bool battery_discharging = false;
+static bool battery_full = true;
 static char battery_state = STATE_AC;
 static int battery_level = 100;
 static int energy_full = 0;
@@ -67,7 +67,7 @@ static char *attr_path;
 
 /* check frequency multiplier (seconds) */
 static int multiplier = 60;
-static char fixed = 0;
+static bool fixed = false;
 
 /* battery warning levels */
 static int warning = 15;
@@ -161,7 +161,7 @@ void update_notification(char *msg, NotifyUrgency urgency, NotifyNotification *n
     if (system(msgcmdbuf) == -1) { /* Ignore command errors... */ }
   }
 
-  if (show_notifications && msg[0] != '\0') {
+  if (notification && show_notifications && msg[0] != '\0') {
     sprintf(body, "Battery level: %u%%", battery_level);
 
     notify_notification_update(notification, msg, body, icon);
@@ -199,8 +199,8 @@ void update_batteries()
   unsigned int tmp_full;
   FILE *file;
 
-  battery_discharging = 0;
-  battery_full = 1;
+  battery_discharging = false;
+  battery_full = true;
   energy_now = 0;
   energy_full = 0;
   set_attributes(battery_names[0], &now_attribute, &full_attribute);
@@ -289,8 +289,9 @@ int split(char *in, char delim, char ***out)
 void parse_args(int argc, char *argv[])
 {
   signed int c;
+  optind = 1;
 
-  while ((c = getopt(argc, argv, "-:hvboiew:c:d:f:pW:C:D:F:P:U:M:Nn:m:a:I:")) != -1) {
+  while ((c = getopt(argc, argv, ":hvboiew:c:d:f:pW:C:D:F:P:U:M:Nn:m:a:I:")) != -1) {
     switch (c) {
       case 'h':
         print_help();
@@ -299,13 +300,13 @@ void parse_args(int argc, char *argv[])
         print_version();
         exit(0);
       case 'b':
-        daemonize = 1;
+        daemonize = true;
         break;
       case 'o':
-        run_once = 1;
+        run_once = true;
         break;
       case 'i':
-        battery_required = 0;
+        battery_required = false;
         break;
       case 'w':
         warning = strtoul(optarg, NULL, 10);
@@ -318,11 +319,11 @@ void parse_args(int argc, char *argv[])
         break;
       case 'f':
         full = strtoul(optarg, NULL, 10);
-        fixed = 1;
+        fixed = true;
         break;
       case 'p':
         show_charging_msg = 1;
-        fixed = 1;
+        fixed = true;
         break;
       case 'W':
         warningmsg = optarg;
@@ -346,15 +347,15 @@ void parse_args(int argc, char *argv[])
         msgcmd = optarg;
         break;
       case 'N':
-        show_notifications = 0;
+        show_notifications = false;
         break;
       case 'n':
-        battery_name_specified = 1;
+        battery_name_specified = true;
         amount_batteries = split(optarg, ',', &battery_names);
         break;
       case 'm':
         if (optarg[0] == '+') {
-          fixed = 1;
+          fixed = true;
           multiplier = strtoul(optarg + 1, NULL, 10);
         } else {
           multiplier = strtoul(optarg, NULL, 10);
@@ -373,8 +374,6 @@ void parse_args(int argc, char *argv[])
         errx(EXIT_FAILURE, "Unknown option `-%c'.", optopt);
       case ':':
         errx(EXIT_FAILURE, "Option -%c requires an argument.", optopt);
-      case 1:
-        errx(EXIT_FAILURE, "Unknown argument %s.", optarg);
     }
   }
 }
@@ -406,7 +405,7 @@ void validate_options()
     errx(EXIT_FAILURE, "Option -f must be greater than %i.", lowlvl);
 }
 
-unsigned char is_type_battery(char *name)
+bool is_type_battery(char *name)
 {
   FILE *file;
   char type[11] = "";
@@ -420,7 +419,7 @@ unsigned char is_type_battery(char *name)
   return strcmp(type, "Battery") == 0;
 }
 
-unsigned char has_capacity_field(char *name)
+bool has_capacity_field(char *name)
 {
   FILE *file;
   int capacity = -1;
@@ -442,7 +441,7 @@ unsigned char has_capacity_field(char *name)
   return capacity >= 0;
 }
 
-unsigned char is_battery(char *name)
+bool is_battery(char *name)
 {
   return is_type_battery(name) && has_capacity_field(name);
 }
@@ -509,9 +508,13 @@ void signal_handler()
 int main(int argc, char *argv[])
 {
   unsigned int duration;
-  char previous_discharging_status;
+  bool previous_discharging_status;
   sigset_t sigs;
   struct timespec timeout = { .tv_sec = 0 };
+  NotifyNotification *notification = NULL;
+  char *config_file = NULL;
+  int conf_argc = 0;
+  char **conf_argv;
 
   sigemptyset(&sigs);
   sigaddset(&sigs, SIGUSR1);
@@ -520,15 +523,24 @@ int main(int argc, char *argv[])
   signal(SIGINT, signal_handler);
   sigprocmask(SIG_BLOCK, &sigs, NULL);
 
-  if (!notify_init(appname))
-    err(EXIT_FAILURE, "Failed to initialize notifications");
-  NotifyNotification *notification = notify_notification_new(warningmsg, NULL, icon);
-
+  config_file = find_config_file();
+  if (config_file) {
+    conf_argv = read_config_file(config_file, &conf_argc, NULL);
+    parse_args(conf_argc, conf_argv);
+  }
   parse_args(argc, argv);
   validate_options();
-  find_batteries();
+  if (config_file)
+    printf("Using config file: %s\n", config_file);
 
-  printf("Using batteries: %s", battery_names[0]);
+  if (show_notifications) {
+    if (!notify_init(appname))
+      err(EXIT_FAILURE, "Failed to initialize notifications");
+    notification = notify_notification_new(warningmsg, NULL, icon);
+  }
+
+  find_batteries();
+  printf("Using batteries:   %s", battery_names[0]);
   for (int i = 1; i < amount_batteries; i++)
     printf(", %s", battery_names[i]);
   printf("\n");

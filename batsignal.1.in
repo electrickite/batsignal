@@ -70,13 +70,54 @@ Send each message using COMMAND
 Battery device NAME - multiple batteries may be separated by commas (default BAT0)
 .TP
 .B \-m SECONDS
-Minimum number of SECONDS (default 60) to wait between battery checks. Settings SECONDS to 0 disables polling and waits for the USR1 signal before checking battery level. Prefixing SECONDS with a + (ex: -m +10) will force a check at SECONDS intervals, regardless of battery level.
+Minimum number of SECONDS (default 60) to wait between battery checks.
+Settings SECONDS to 0 disables polling and waits for the USR1 signal before checking battery level.
+Prefixing SECONDS with a + (ex: -m +10) will force a check at SECONDS intervals, regardless of battery level.
 .TP
 .B \-a APP_NAME
 App name used in notifications (default: batsignal)
 .TP
 .B \-I ICON
 Display specified ICON in notifications
+.SH CONFIGURATION
+The options described above can be passed as program arguments or placed in an options configuration file.
+Options from the configuration file will be applied first and then may be overridden by command line as arguments.
+.P
+The configuration file should include option arguments as documented above, one argument per line.
+Lines beginning with # and empty lines are ignored.
+For example, to specify a warning level of 30 and run as a background daemon, the following configuration file could be used:
+.RS
+.P
+# Run in background
+.br
+-b
+.br
+# Use warning level of 30
+.br
+-w
+.br
+30
+.RE
+.P
+Tthe following paths are checked in sequence for a configuration file:
+.IP \[bu]
+.B BATSIGNAL_CONFIG
+environment variable (if present)
+.IP \[bu]
+$HOME/.config/batsignal (or the config base specificed in XDG_CONFIG_HOME)
+.IP \[bu]
+$HOME/.batsignal
+.IP \[bu]
+/usr/local/etc/batsignal
+.IP \[bu]
+/etc/batsignal
+.SH ENVIRONMENT
+.TP
+.B BATSIGNAL_CONFIG
+Sets the option configuration file path.
+.TP
+.B XDG_CONFIG_HOME
+The base path for the XDG config directory. Used in the option file search.
 .SH SIGNALS
 batsignal responds to the following signals:
 .TP
@@ -86,9 +127,9 @@ Sending the process SIGUSR1 will cause an immediate battery check to be performe
 In most cases, batsignal will perform fewer battery state checks while the battery is discharging and the level of charge is not near a warning level.
 This frequency is affected by the multiplier (-m) option and is never less than <multiplier> seconds.
 If the "full" level (-f) is set or charge/discharge messages are enabled (-p), batsignal will instead check the battery state every <multiplier> seconds regardless of level of charge.
-
+.P
 If the "full" level (-f) is set, the battery full notification will be triggered at the given level of charge or when the battery status changes to full, whichever occurs first.
-
+.P
 The message COMMAND passed with -M is a C printf-style format string.
 It can use two string placeholders (%s) that will be replaced by the message text and the current battery level.
 Be sure to test the command - invalid format strings may cause batsignal to crash.

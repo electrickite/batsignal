@@ -13,7 +13,7 @@ SED = sed
 GREP = grep
 CUT = cut
 
-VERSION != $(GREP) VERSION version.h | $(CUT) -d \" -f2
+VERSION != $(GREP) VERSION defs.h | $(CUT) -d \" -f2
 
 PREFIX = /usr/local
 
@@ -31,14 +31,16 @@ LIBS := $(LIBS) -lm
 LDFLAGS_EXTRA = -s
 LDFLAGS := $(LDFLAGS_EXTRA) $(LDFLAGS)
 
+OBJ = $(NAME).o options.o
+
 all: $(NAME) $(NAME).1
 
-$(NAME).o: version.h
+$(NAME).o: defs.h
 
-$(NAME): $(NAME).o
-	$(CC) -o $(NAME) $(LDFLAGS) $(NAME).o $(LIBS)
+$(NAME): $(OBJ)
+	$(CC) -o $(NAME) $(LDFLAGS) $(OBJ) $(LIBS)
 
-$(NAME).1: $(NAME).1.in version.h
+$(NAME).1: $(NAME).1.in defs.h
 	$(SED) "s/VERSION/$(VERSION)/g" < $(NAME).1.in > $@
 
 install: all
@@ -62,7 +64,7 @@ clean-all: clean clean-images
 
 clean:
 	@echo Cleaning build files
-	$(RM) $(NAME) $(NAME).o $(NAME).1
+	$(RM) $(NAME) $(OBJ) $(NAME).1
 
 clean-images: arch-clean debian-stable-clean debian-testing-clean ubuntu-latest-clean fedora-latest-clean
 
