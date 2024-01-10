@@ -14,6 +14,8 @@ GREP = grep
 CUT = cut
 
 VERSION != $(GREP) VERSION defs.h | $(CUT) -d \" -f2
+PROGNAME != $(GREP) PROGNAME defs.h | $(CUT) -d \" -f2
+PROGUPPER != $(GREP) PROGUPPER defs.h | $(CUT) -d \" -f2
 
 PREFIX = /usr/local
 
@@ -31,17 +33,17 @@ LIBS := $(LIBS) -lm
 LDFLAGS_EXTRA = -s
 LDFLAGS := $(LDFLAGS_EXTRA) $(LDFLAGS)
 
-OBJ = $(NAME).o options.o
+OBJ = main.o options.o
 
 all: $(NAME) $(NAME).1
 
-$(NAME).o: defs.h
+%.o: defs.h
 
 $(NAME): $(OBJ)
 	$(CC) -o $(NAME) $(LDFLAGS) $(OBJ) $(LIBS)
 
 $(NAME).1: $(NAME).1.in defs.h
-	$(SED) "s/VERSION/$(VERSION)/g" < $(NAME).1.in > $@
+	$(SED) "s/VERSION/$(VERSION)/g" < $(NAME).1.in | $(SED) "s/PROGNAME/$(PROGNAME)/g" | $(SED) "s/PROGUPPER/$(PROGUPPER)/g" > $@
 
 install: all
 	@echo Installing in $(DESTDIR)$(PREFIX)

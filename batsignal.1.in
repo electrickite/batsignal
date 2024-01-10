@@ -1,11 +1,11 @@
-.TH BATSIGNAL 1 batsignal\-VERSION
+.TH PROGUPPER 1 PROGNAME\-VERSION
 .SH NAME
-batsignal \- battery monitor daemon
+PROGNAME \- battery monitor daemon
 .SH SYNOPSIS
-.B batsignal
+.B PROGNAME
 .RB [ OPTIONS ]
 .SH DESCRIPTION
-batsignal is a lightweight battery daemon written in C that notifies the user about battery states.
+PROGNAME is a lightweight battery daemon written in C that notifies the user about battery states.
 It is intended for minimal window managers, but can be used in any environment that supports desktop notifications via libnotify.
 .SH OPTIONS
 .TP
@@ -16,7 +16,7 @@ Display help
 Display version information
 .TP
 .B \-b
-Run batsignal as background daemon
+Run PROGNAME as background daemon
 .TP
 .B \-o
 Check battery once and exit
@@ -75,7 +75,7 @@ Settings SECONDS to 0 disables polling and waits for the USR1 signal before chec
 Prefixing SECONDS with a + (ex: -m +10) will force a check at SECONDS intervals, regardless of battery level.
 .TP
 .B \-a APP_NAME
-App name used in notifications (default: batsignal)
+App name used in notifications (default: PROGNAME)
 .TP
 .B \-I ICON
 Display specified ICON in notifications
@@ -101,38 +101,38 @@ For example, to specify a warning level of 30 and run as a background daemon, th
 .P
 Tthe following paths are checked in sequence for a configuration file:
 .IP \[bu]
-.B BATSIGNAL_CONFIG
+.B PROGUPPER_CONFIG
 environment variable (if present)
 .IP \[bu]
-$HOME/.config/batsignal (or the config base specificed in XDG_CONFIG_HOME)
+$HOME/.config/PROGNAME (or the config base specificed in XDG_CONFIG_HOME)
 .IP \[bu]
-$HOME/.batsignal
+$HOME/.PROGNAME
 .IP \[bu]
-/usr/local/etc/batsignal
+/usr/local/etc/PROGNAME
 .IP \[bu]
-/etc/batsignal
+/etc/PROGNAME
 .SH ENVIRONMENT
 .TP
-.B BATSIGNAL_CONFIG
+.B PROGUPPER_CONFIG
 Sets the option configuration file path.
 .TP
 .B XDG_CONFIG_HOME
 The base path for the XDG config directory. Used in the option file search.
 .SH SIGNALS
-batsignal responds to the following signals:
+PROGNAME responds to the following signals:
 .TP
 .B SIGUSR1
 Sending the process SIGUSR1 will cause an immediate battery check to be performed.
 .SH NOTES
-In most cases, batsignal will perform fewer battery state checks while the battery is discharging and the level of charge is not near a warning level.
+In most cases, PROGNAME will perform fewer battery state checks while the battery is discharging and the level of charge is not near a warning level.
 This frequency is affected by the multiplier (-m) option and is never less than <multiplier> seconds.
-If the "full" level (-f) is set or charge/discharge messages are enabled (-p), batsignal will instead check the battery state every <multiplier> seconds regardless of level of charge.
+If the "full" level (-f) is set or charge/discharge messages are enabled (-p), PROGNAME will instead check the battery state every <multiplier> seconds regardless of level of charge.
 .P
 If the "full" level (-f) is set, the battery full notification will be triggered at the given level of charge or when the battery status changes to full, whichever occurs first.
 .P
 The message COMMAND passed with -M is a C printf-style format string.
 It can use two string placeholders (%s) that will be replaced by the message text and the current battery level.
-Be sure to test the command - invalid format strings may cause batsignal to crash.
+Be sure to test the command - invalid format strings may cause PROGNAME to crash.
 .br
 Ex: -M "wall 'Battery warning: %s - Level is %s'"
 .SH COPYRIGHT

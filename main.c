@@ -46,17 +46,7 @@
 #define POWER_SUPPLY_FULL "Full"
 #define POWER_SUPPLY_DISCHARGING "Discharging"
 
-/* program operation options */
-static bool daemonize = false;
-static bool run_once = false;
-static bool battery_required = true;
-static bool show_notifications = true;
-static bool show_charging_msg = false;
-static bool battery_name_specified = false;
-
 /* battery information */
-static char **battery_names;
-static int amount_batteries = 1;
 static bool battery_discharging = false;
 static bool battery_full = true;
 static char battery_state = STATE_AC;
@@ -65,38 +55,8 @@ static int energy_full = 0;
 static int energy_now = 0;
 static char *attr_path;
 
-/* check frequency multiplier (seconds) */
-static int multiplier = 60;
-static bool fixed = false;
-
-/* battery warning levels */
-static int warning = 15;
-static int critical = 5;
-static int danger = 2;
-static int full = 0;
-
-/* messages for battery levels */
-static char *warningmsg = "Battery is low";
-static char *criticalmsg = "Battery is critically low";
-static char *fullmsg = "Battery is full";
-static char *chargingmsg = "Battery is charging";
-static char *dischargingmsg = "Battery is discharging";
-
-/* run this system command if battery reaches danger level */
-static char *dangercmd = "";
-
-/* run this system command to display a message */
-static char *msgcmd = "";
-static char *msgcmdbuf;
-
-/* app name for notification */
-static char *appname = PROGNAME;
-
-/* specify the icon used in notifications */
-static char *icon = NULL;
-
-/* specify when the notification should expire */
-static int notification_expires = NOTIFY_EXPIRES_NEVER;
+/* Shared notification instance */
+NotifyNotification *notification = NULL;
 
 void print_version()
 {
@@ -145,28 +105,29 @@ Options:\n\
 ", PROGNAME, PROGNAME);
 }
 
-void update_notification(char *msg, NotifyUrgency urgency, NotifyNotification *notification)
+void update_notification(char *msg, NotifyUrgency urgency, Config *config)
 {
   char body[20];
   char level[8];
   size_t needed;
+  static char *msgcmdbuf = NULL;
 
-  if (msgcmd[0] != '\0') {
+  if (config->msgcmd[0] != '\0') {
     snprintf(level, 8, "%d", battery_level);
-    needed = snprintf(NULL, 0, msgcmd, msg, level);
+    needed = snprintf(NULL, 0, config->msgcmd, msg, level);
     msgcmdbuf = realloc(msgcmdbuf, needed + 1);
     if (msgcmdbuf == NULL)
       err(EXIT_FAILURE, "Memory allocation failed");
-    sprintf(msgcmdbuf, msgcmd, msg, level);
+    sprintf(msgcmdbuf, config->msgcmd, msg, level);
     if (system(msgcmdbuf) == -1) { /* Ignore command errors... */ }
   }
 
-  if (notification && show_notifications && msg[0] != '\0') {
+  if (notification && config->show_notifications && msg[0] != '\0') {
     sprintf(body, "Battery level: %u%%", battery_level);
 
-    notify_notification_update(notification, msg, body, icon);
+    notify_notification_update(notification, msg, body, config->icon);
     notify_notification_set_urgency(notification, urgency);
-    notify_notification_set_timeout(notification, notification_expires);
+    notify_notification_set_timeout(notification, config->notification_expires);
     notify_notification_show(notification, NULL);
   }
 }
@@ -189,7 +150,7 @@ void set_attributes(char *battery_name, char **now_attribute, char **full_attrib
   }
 }
 
-void update_batteries()
+void update_batteries(char **battery_names, int amount_batteries, bool required)
 {
   char state[15];
   char *battery_name;
@@ -212,7 +173,7 @@ void update_batteries()
     sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/status", battery_name);
     file = fopen(attr_path, "r");
     if (file == NULL || fscanf(file, "%12s", state) == 0) {
-      if (battery_required)
+      if (required)
         err(EXIT_FAILURE, "Could not read %s", attr_path);
       battery_discharging |= 0;
       if (file)
@@ -227,7 +188,7 @@ void update_batteries()
     sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/%s", battery_name, now_attribute);
     file = fopen(attr_path, "r");
     if (file == NULL || fscanf(file, "%u", &tmp_now) == 0) {
-      if (battery_required)
+      if (required)
         err(EXIT_FAILURE, "Could not read %s", attr_path);
       if (file)
         fclose(file);
@@ -239,7 +200,7 @@ void update_batteries()
       sprintf(attr_path, POWER_SUPPLY_SUBSYSTEM "/%s/%s", battery_name, full_attribute);
       file = fopen(attr_path, "r");
       if (file == NULL || fscanf(file, "%u", &tmp_full) == 0) {
-        if (battery_required)
+        if (required)
           err(EXIT_FAILURE, "Could not read %s", attr_path);
         if (file)
           fclose(file);
@@ -255,154 +216,6 @@ void update_batteries()
   }
 
   battery_level = round(100.0 * energy_now / energy_full);
-}
-
-int split(char *in, char delim, char ***out)
-{
-  int count = 1;
-
-  char *p = in;
-  while (*p != '\0') {
-    if (*p == delim)
-      count++;
-    p++;
-  }
-
-  *out = (char **)realloc(*out, sizeof(char **) * (count));
-  if (*out == NULL)
-    err(EXIT_FAILURE, "Memory allocation failed");
-
-  (*out)[0] = strtok(in, &delim);
-  for (int i = 1; i < count; i++) {
-    char *tok = strtok(NULL, &delim);
-    if (tok)
-      (*out)[i] = tok;
-    else {
-      count--;
-      i--;
-    }
-  }
-
-  return count;
-}
-
-void parse_args(int argc, char *argv[])
-{
-  signed int c;
-  optind = 1;
-
-  while ((c = getopt(argc, argv, ":hvboiew:c:d:f:pW:C:D:F:P:U:M:Nn:m:a:I:")) != -1) {
-    switch (c) {
-      case 'h':
-        print_help();
-        exit(0);
-      case 'v':
-        print_version();
-        exit(0);
-      case 'b':
-        daemonize = true;
-        break;
-      case 'o':
-        run_once = true;
-        break;
-      case 'i':
-        battery_required = false;
-        break;
-      case 'w':
-        warning = strtoul(optarg, NULL, 10);
-        break;
-      case 'c':
-        critical = strtoul(optarg, NULL, 10);
-        break;
-      case 'd':
-        danger = strtoul(optarg, NULL, 10);
-        break;
-      case 'f':
-        full = strtoul(optarg, NULL, 10);
-        fixed = true;
-        break;
-      case 'p':
-        show_charging_msg = 1;
-        fixed = true;
-        break;
-      case 'W':
-        warningmsg = optarg;
-        break;
-      case 'C':
-        criticalmsg = optarg;
-        break;
-      case 'D':
-        dangercmd = optarg;
-        break;
-      case 'F':
-        fullmsg = optarg;
-        break;
-      case 'P':
-        chargingmsg = optarg;
-        break;
-      case 'U':
-        dischargingmsg = optarg;
-        break;
-      case 'M':
-        msgcmd = optarg;
-        break;
-      case 'N':
-        show_notifications = false;
-        break;
-      case 'n':
-        battery_name_specified = true;
-        amount_batteries = split(optarg, ',', &battery_names);
-        break;
-      case 'm':
-        if (optarg[0] == '+') {
-          fixed = true;
-          multiplier = strtoul(optarg + 1, NULL, 10);
-        } else {
-          multiplier = strtoul(optarg, NULL, 10);
-        }
-        break;
-      case 'a':
-        appname = optarg;
-        break;
-      case 'I':
-        icon = optarg;
-        break;
-      case 'e':
-        notification_expires = NOTIFY_EXPIRES_DEFAULT;
-        break;
-      case '?':
-        errx(EXIT_FAILURE, "Unknown option `-%c'.", optopt);
-      case ':':
-        errx(EXIT_FAILURE, "Option -%c requires an argument.", optopt);
-    }
-  }
-}
-
-void validate_options()
-{
-  int lowlvl = danger;
-  char *rangemsg = "Option -%c must be between 0 and %i.";
-
-  /* Sanity check numberic values */
-  if (warning > 100 || warning < 0) errx(EXIT_FAILURE, rangemsg, 'w', 100);
-  if (critical > 100 || critical < 0) errx(EXIT_FAILURE, rangemsg, 'c', 100);
-  if (danger > 100 || danger < 0) errx(EXIT_FAILURE, rangemsg, 'd', 100);
-  if (full > 100 || full < 0) errx(EXIT_FAILURE, rangemsg, 'f', 100);
-  if (multiplier < 0 || multiplier > 3600) errx(EXIT_FAILURE, rangemsg, 'm', 3600);
-
-  /* Enssure levels are correctly ordered */
-  if (warning && warning <= critical)
-    errx(EXIT_FAILURE, "Warning level must be greater than critical.");
-  if (critical && critical <= danger)
-    errx(EXIT_FAILURE, "Critical level must be greater than danger.");
-
-  /* Find highest warning level */
-  if (warning || critical)
-    lowlvl = warning ? warning : critical;
-
-  /* Ensure the full level is higher than the warning levels */
-  if (full && full <= lowlvl)
-    errx(EXIT_FAILURE, "Option -f must be greater than %i.", lowlvl);
 }
 
 bool is_type_battery(char *name)
@@ -446,7 +259,7 @@ bool is_battery(char *name)
   return is_type_battery(name) && has_capacity_field(name);
 }
 
-void find_batteries()
+void find_batteries(Config *config)
 {
   unsigned int path_len = strlen(POWER_SUPPLY_SUBSYSTEM) + 15;
   unsigned int entry_name_len = 0;
@@ -454,16 +267,16 @@ void find_batteries()
   DIR *dir;
   struct dirent *entry;
 
-  if (battery_name_specified) {
-    for (int i = 0; i < amount_batteries; i++) {
-      if (strlen(battery_names[i]) > name_len) {
-        name_len = strlen(battery_names[i]);
+  if (config->battery_name_specified) {
+    for (int i = 0; i < config->amount_batteries; i++) {
+      if (strlen(config->battery_names[i]) > name_len) {
+        name_len = strlen(config->battery_names[i]);
         attr_path = realloc(attr_path, path_len + name_len);
       }
-      if (is_battery(battery_names[i])) {
+      if (is_battery(config->battery_names[i])) {
         continue;
-      } else if (battery_name_specified && battery_required) {
-        err(EXIT_FAILURE, "Battery %s not found", battery_names[i]);
+      } else if (config->battery_name_specified && config->battery_required) {
+        err(EXIT_FAILURE, "Battery %s not found", config->battery_names[i]);
       }
     }
   } else {
@@ -479,14 +292,14 @@ void find_batteries()
           err(EXIT_FAILURE, "Memory allocation failed");
 
         if (is_battery(entry->d_name)) {
-          battery_names = (char **)realloc(battery_names, sizeof(char *) * i);
-          battery_names[i] = strdup(entry->d_name);
-          if (battery_names[i] == NULL)
+          config->battery_names = (char **)realloc(config->battery_names, sizeof(char *) * i);
+          config->battery_names[i] = strdup(entry->d_name);
+          if (config->battery_names[i] == NULL)
             err(EXIT_FAILURE, "Memory allocation failed");
           i++;
         }
       }
-      amount_batteries = i;
+      config->amount_batteries = i;
     }
 
     closedir(dir);
@@ -511,10 +324,37 @@ int main(int argc, char *argv[])
   bool previous_discharging_status;
   sigset_t sigs;
   struct timespec timeout = { .tv_sec = 0 };
-  NotifyNotification *notification = NULL;
   char *config_file = NULL;
   int conf_argc = 0;
   char **conf_argv;
+  Config config = {
+    .daemonize = false,
+    .run_once = false,
+    .battery_required = true,
+    .show_notifications = true,
+    .show_charging_msg = false,
+    .help = false,
+    .version = false,
+    .battery_name_specified = false,
+    .battery_names = NULL,
+    .amount_batteries = 1,
+    .multiplier = 60,
+    .fixed = false,
+    .warning = 15,
+    .critical = 5,
+    .danger = 2,
+    .full = 0,
+    .warningmsg = "Battery is low",
+    .criticalmsg = "Battery is critically low",
+    .fullmsg = "Battery is full",
+    .chargingmsg = "Battery is charging",
+    .dischargingmsg = "Battery is discharging",
+    .dangercmd = "",
+    .msgcmd = "",
+    .appname = PROGNAME,
+    .icon = NULL,
+    .notification_expires = NOTIFY_EXPIRES_NEVER
+  };
 
   sigemptyset(&sigs);
   sigaddset(&sigs, SIGUSR1);
@@ -526,78 +366,87 @@ int main(int argc, char *argv[])
   config_file = find_config_file();
   if (config_file) {
     conf_argv = read_config_file(config_file, &conf_argc, NULL);
-    parse_args(conf_argc, conf_argv);
+    parse_args(conf_argc, conf_argv, &config);
   }
-  parse_args(argc, argv);
-  validate_options();
+  parse_args(argc, argv, &config);
+
+  if (config.help) {
+    print_help();
+    return EXIT_SUCCESS;
+  } else if (config.version) {
+    print_version();
+    return EXIT_SUCCESS;
+  }
+
+  validate_options(&config);
   if (config_file)
     printf("Using config file: %s\n", config_file);
 
-  if (show_notifications) {
-    if (!notify_init(appname))
+  if (config.show_notifications) {
+    if (!notify_init(config.appname))
       err(EXIT_FAILURE, "Failed to initialize notifications");
-    notification = notify_notification_new(warningmsg, NULL, icon);
+    notification = notify_notification_new(config.warningmsg, NULL, config.icon);
   }
 
-  find_batteries();
-  printf("Using batteries:   %s", battery_names[0]);
-  for (int i = 1; i < amount_batteries; i++)
-    printf(", %s", battery_names[i]);
+  find_batteries(&config);
+  printf("Using batteries:   %s", config.battery_names[0]);
+  for (int i = 1; i < config.amount_batteries; i++)
+    printf(", %s", config.battery_names[i]);
   printf("\n");
 
-  if (daemonize && daemon(1, 1) < 0) {
+  if (config.daemonize && daemon(1, 1) < 0) {
     err(EXIT_FAILURE, "Failed to daemonize");
   }
 
-  update_batteries();
+  update_batteries(config.battery_names, config.amount_batteries, config.battery_required);
 
   for(;;) {
     previous_discharging_status = battery_discharging;
-    update_batteries();
-    duration = multiplier;
+    update_batteries(config.battery_names, config.amount_batteries, config.battery_required);
+    duration = config.multiplier;
 
     if (battery_discharging) { /* discharging */
-      if (danger && battery_level <= danger) {
+      if (config.danger && battery_level <= config.danger) {
         if (battery_state != STATE_DANGER) {
           battery_state = STATE_DANGER;
-          if (dangercmd[0] != '\0')
-            if (system(dangercmd) == -1) { /* Ignore command errors... */ }
+          if (config.dangercmd[0] != '\0')
+            if (system(config.dangercmd) == -1) { /* Ignore command errors... */ }
         }
 
-      } else if (critical && battery_level <= critical) {
+      } else if (config.critical && battery_level <= config.critical) {
         if (battery_state != STATE_CRITICAL) {
           battery_state = STATE_CRITICAL;
-          update_notification(criticalmsg, NOTIFY_URGENCY_CRITICAL, notification);
+          update_notification(config.criticalmsg, NOTIFY_URGENCY_CRITICAL, &config);
         }
 
-      } else if (warning && battery_level <= warning) {
-        if (!fixed)
-          duration = (battery_level - critical) * multiplier;
+      } else if (config.warning && battery_level <= config.warning) {
+        if (!config.fixed)
+          duration = (battery_level - config.critical) * config.multiplier;
 
         if (battery_state != STATE_WARNING) {
           battery_state = STATE_WARNING;
-          update_notification(warningmsg, NOTIFY_URGENCY_NORMAL, notification);
+          update_notification(config.warningmsg, NOTIFY_URGENCY_NORMAL, &config);
         }
 
       } else {
-        if (show_charging_msg && battery_discharging != previous_discharging_status) {
-          update_notification(dischargingmsg, NOTIFY_URGENCY_NORMAL, notification);
+        if (config.show_charging_msg && battery_discharging != previous_discharging_status) {
+          update_notification(config.dischargingmsg, NOTIFY_URGENCY_NORMAL, &config);
         } else if (battery_state == STATE_FULL) {
           notify_notification_close(notification, NULL);
         }
         battery_state = STATE_DISCHARGING;
-        if (!fixed)
-          duration = (battery_level - warning) * multiplier;
+        if (!config.fixed)
+          duration = (battery_level - config.warning) * config.multiplier;
       }
 
     } else { /* charging */
-      if ((full && battery_state != STATE_FULL) && (battery_level >= full || battery_full)) {
+      if ((config.full && battery_state != STATE_FULL) && (battery_level >= config.full || battery_full)) {
         battery_state = STATE_FULL;
-        update_notification(fullmsg, NOTIFY_URGENCY_NORMAL, notification);
+        update_notification(config.fullmsg, NOTIFY_URGENCY_NORMAL, &config);
 
-      } else if (show_charging_msg && battery_discharging != previous_discharging_status) {
+      } else if (config.show_charging_msg && battery_discharging != previous_discharging_status) {
         battery_state = STATE_AC;
-        update_notification(chargingmsg, NOTIFY_URGENCY_NORMAL, notification);
+        update_notification(config.chargingmsg, NOTIFY_URGENCY_NORMAL, &config);
 
       } else {
         battery_state = STATE_AC;
@@ -605,9 +454,9 @@ int main(int argc, char *argv[])
       }
     }
 
-    if (run_once) {
+    if (config.run_once) {
       break;
-    } else if (multiplier == 0) {
+    } else if (config.multiplier == 0) {
       sigwaitinfo(&sigs, NULL);
     } else {
       timeout.tv_sec = duration;
