@@ -1,6 +1,6 @@
 .POSIX:
 
-NAME = batsignal
+TARGET = batsignal
 
 CC.$(CC)=$(CC)
 CC.=cc
@@ -13,9 +13,9 @@ SED = sed
 GREP = grep
 CUT = cut
 
-VERSION != $(GREP) VERSION defs.h | $(CUT) -d \" -f2
-PROGNAME != $(GREP) PROGNAME defs.h | $(CUT) -d \" -f2
-PROGUPPER != $(GREP) PROGUPPER defs.h | $(CUT) -d \" -f2
+VERSION != $(GREP) VERSION main.h | $(CUT) -d \" -f2
+PROGNAME != $(GREP) PROGNAME main.h | $(CUT) -d \" -f2
+PROGUPPER != $(GREP) PROGUPPER main.h | $(CUT) -d \" -f2
 
 PREFIX = /usr/local
 
@@ -33,47 +33,51 @@ LIBS := $(LIBS) -lm
 LDFLAGS_EXTRA = -s
 LDFLAGS := $(LDFLAGS_EXTRA) $(LDFLAGS)
 
-OBJ = main.o options.o
+SRC = main.c options.c battery.c notify.c
+OBJ = $(SRC:.c=.o)
+HDR = $(SRC:.c=.h)
 
-all: $(NAME) $(NAME).1
+.PHONY: all install install-service clean test compile-test
 
-%.o: defs.h
+all: $(TARGET) $(TARGET).1
 
-$(NAME): $(OBJ)
-	$(CC) -o $(NAME) $(LDFLAGS) $(OBJ) $(LIBS)
+$(TARGET): $(OBJ)
+	$(CC) -o $(TARGET) $(LDFLAGS) $(OBJ) $(LIBS)
 
-$(NAME).1: $(NAME).1.in defs.h
-	$(SED) "s/VERSION/$(VERSION)/g" < $(NAME).1.in | $(SED) "s/PROGNAME/$(PROGNAME)/g" | $(SED) "s/PROGUPPER/$(PROGUPPER)/g" > $@
+%.o: $(HDR)
+
+$(TARGET).1: $(TARGET).1.in main.h
+	$(SED) "s/VERSION/$(VERSION)/g" < $(TARGET).1.in | $(SED) "s/PROGNAME/$(PROGNAME)/g" | $(SED) "s/PROGUPPER/$(PROGUPPER)/g" > $@
 
 install: all
 	@echo Installing in $(DESTDIR)$(PREFIX)
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/bin
 	$(INSTALL) -d $(DESTDIR)$(MANPREFIX)/man1
-	$(INSTALL) -m 0755 $(NAME) $(DESTDIR)$(PREFIX)/bin/
-	$(INSTALL) -m 0644 $(NAME).1 $(DESTDIR)$(MANPREFIX)/man1/
+	$(INSTALL) -m 0755 $(TARGET) $(DESTDIR)$(PREFIX)/bin/
+	$(INSTALL) -m 0644 $(TARGET).1 $(DESTDIR)$(MANPREFIX)/man1/
 
 install-service: install
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/lib/systemd/user
-	$(INSTALL) -m 0644 $(NAME).service $(DESTDIR)$(PREFIX)/lib/systemd/user/
+	$(INSTALL) -m 0644 $(TARGET).service $(DESTDIR)$(PREFIX)/lib/systemd/user/
 
 uninstall:
 	@echo Removing files from $(DESTDIR)$(PREFIX)
-	$(RM) $(DESTDIR)$(PREFIX)/bin/$(NAME)
-	$(RM) $(DESTDIR)$(MANPREFIX)/man1/$(NAME).1
-	$(RM) $(DESTDIR)$(PREFIX)/lib/systemd/user/$(NAME).service
+	$(RM) $(DESTDIR)$(PREFIX)/bin/$(TARGET)
+	$(RM) $(DESTDIR)$(MANPREFIX)/man1/$(TARGET).1
+	$(RM) $(DESTDIR)$(PREFIX)/lib/systemd/user/$(TARGET).service
 
 clean-all: clean clean-images
 
 clean:
 	@echo Cleaning build files
-	$(RM) $(NAME) $(OBJ) $(NAME).1
+	$(RM) $(TARGET) $(OBJ) $(TARGET).1
 
 clean-images: arch-clean debian-stable-clean debian-testing-clean ubuntu-latest-clean fedora-latest-clean
 
 %-clean: test/Dockerfile.%
 	@echo Removing images for $*
-	-docker container prune --force --filter="label=$(NAME)-$*"
-	-docker rmi -f $(NAME)-$*
+	-docker container prune --force --filter="label=$(TARGET)-$*"
+	-docker rmi -f $(TARGET)-$*
 
 test: compile-test
 
@@ -82,5 +86,5 @@ compile-test: arch-test debian-stable-test debian-testing-test ubuntu-latest-tes
 
 %-test: test/Dockerfile.%
 	@echo Starting compile test for $*
-	docker build --label=$(NAME)-$* --tag=$(NAME)-$* --file=$< .
-	docker run -it $(NAME)-$*
+	docker build --label=$(TARGET)-$* --tag=$(TARGET)-$* --file=$< .
+	docker run -it $(TARGET)-$*

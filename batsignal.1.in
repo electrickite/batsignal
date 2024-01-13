@@ -80,7 +80,7 @@ App name used in notifications (default: PROGNAME)
 .B \-I ICON
 Display specified ICON in notifications
 .SH CONFIGURATION
-The options described above can be passed as program arguments or placed in an options configuration file.
+Options can be passed to PROGNAME as command arguments or placed in a configuration file.
 Options from the configuration file will be applied first and then may be overridden by command line as arguments.
 .P
 The configuration file should include option arguments as documented above, one argument per line.
@@ -99,7 +99,7 @@ For example, to specify a warning level of 30 and run as a background daemon, th
 30
 .RE
 .P
-Tthe following paths are checked in sequence for a configuration file:
+The following paths are checked in sequence for a configuration file:
 .IP \[bu]
 .B PROGUPPER_CONFIG
 environment variable (if present)

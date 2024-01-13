@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2018-2024 Corey Hinshaw
+ */
+
 #define _DEFAULT_SOURCE
 #include "options.h"
 #include <err.h>
@@ -7,11 +11,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "defs.h"
+#include "main.h"
 
 static int split(char *in, char delim, char ***out)
 {
   int count = 1;
+
+  if (in[0] == '\0')
+    return 0;
 
   char *p = in;
   while (*p != '\0') {
@@ -68,7 +75,7 @@ char* find_config_file()
   config_paths[4] = "/etc/" PROGNAME;
 
   for (int i = 0; i < 5; i++) {
-	  if (config_paths[i] && access(config_paths[i], F_OK) == 0) {
+    if (config_paths[i] && access(config_paths[i], F_OK) == 0) {
       config_file = strdup(config_paths[i]);
       if (config_file == NULL)
         err(EXIT_FAILURE, "Memory allocation failed");
@@ -195,8 +202,7 @@ void parse_args(int argc, char *argv[], Config *config)
         config->show_notifications = false;
         break;
       case 'n':
-        config->battery_name_specified = true;
-        config->amount_batteries = split(optarg, ',', &config->battery_names);
+        config->battery_count = split(optarg, ',', &config->battery_names);
         break;
       case 'm':
         if (optarg[0] == '+') {

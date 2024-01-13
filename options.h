@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2018-2024 Corey Hinshaw
+ */
+
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
@@ -15,9 +19,8 @@ typedef struct Config {
   bool version;
 
   /* Battery configuration */
-  bool battery_name_specified;
   char **battery_names;
-  int amount_batteries;
+  int battery_count;
 
   /* check frequency multiplier (seconds) */
   int multiplier;
